@@ -1,0 +1,431 @@
+---
+title: 'Invoices'
+description: 'Manage invoices for factoring'
+---
+
+## Get Invoice by Code
+
+```http
+GET /api/buscarfac/{codFactura}
+```
+
+Retrieves a single invoice by its code.
+
+<ParamField path="codFactura" type="string" required>
+  The invoice code (e.g., "F-001")
+</ParamField>
+
+<RequestExample>
+```bash cURL
+curl -X GET "https://api.investgo.com/api/buscarfac/F-001" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200 - Success
+{
+  "factura": {
+    "idFactura": 1,
+    "codFactura": "F-001",
+    "monto": 15000.00,
+    "fechaEmision": "2024-01-15",
+    "fechaPago": "2024-02-15",
+    "enable": "Activo",
+    "descripcion": "Servicio de consultoría",
+    "empresa": {
+      "idEmpresa": 1,
+      "nomEmpresa": "Tech Solutions SAC",
+      "ruc": "20123456789"
+    }
+  }
+}
+```
+
+```json 404 - Not Found
+{
+  "mensaje": "No se encontró la factura con el código: F-999"
+}
+```
+</ResponseExample>
+
+---
+
+## List Invoices by Date Range
+
+```http
+GET /api/facturas/{fechaInicio}/{fechaFin}
+```
+
+Retrieves invoices within a specified date range.
+
+<ParamField path="fechaInicio" type="date" required>
+  Start date (format: yyyy-MM-dd)
+</ParamField>
+
+<ParamField path="fechaFin" type="date" required>
+  End date (format: yyyy-MM-dd)
+</ParamField>
+
+<RequestExample>
+```bash cURL
+curl -X GET "https://api.investgo.com/api/facturas/2024-01-01/2024-01-31" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200 - Success
+{
+  "facturas": [
+    {
+      "idFactura": 1,
+      "codFactura": "F-001",
+      "monto": 15000.00,
+      "fechaEmision": "2024-01-15",
+      "fechaPago": "2024-02-15",
+      "enable": "Activo",
+      "descripcion": "Servicio de consultoría"
+    }
+  ]
+}
+```
+</ResponseExample>
+
+---
+
+## List Invoices by Company
+
+```http
+GET /api/facturas/{idEmpresa}
+```
+
+Retrieves all invoices for a specific company.
+
+<ParamField path="idEmpresa" type="integer" required>
+  Company ID
+</ParamField>
+
+<RequestExample>
+```bash cURL
+curl -X GET "https://api.investgo.com/api/facturas/1" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200 - Success
+{
+  "facturas": [
+    {
+      "idFactura": 1,
+      "codFactura": "F-001",
+      "monto": 15000.00,
+      "fechaEmision": "2024-01-15",
+      "fechaPago": "2024-02-15",
+      "enable": "Activo",
+      "descripcion": "Servicio de consultoría"
+    }
+  ]
+}
+```
+
+```json 404 - Company Not Found
+{
+  "mensaje": "No se encontró la empresa con el id: 999"
+}
+```
+</ResponseExample>
+
+---
+
+## List Active Invoices by Company
+
+```http
+GET /api/facturas/activas/{idEmpresa}
+```
+
+Retrieves all active invoices for a specific company.
+
+<ParamField path="idEmpresa" type="integer" required>
+  Company ID
+</ParamField>
+
+<RequestExample>
+```bash cURL
+curl -X GET "https://api.investgo.com/api/facturas/activas/1" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+</RequestExample>
+
+---
+
+## List All Active Invoices
+
+```http
+GET /api/active/listaFactura
+```
+
+Retrieves all active invoices (excludes "No Activo" invoices).
+
+<RequestExample>
+```bash cURL
+curl -X GET "https://api.investgo.com/api/active/listaFactura" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+</RequestExample>
+
+---
+
+## List All Invoices
+
+```http
+GET /api/listaFacturas
+```
+
+Retrieves all invoices in the system.
+
+<RequestExample>
+```bash cURL
+curl -X GET "https://api.investgo.com/api/listaFacturas" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+</RequestExample>
+
+---
+
+## List Invoices (Paginated)
+
+```http
+GET /api/listaFacturas/page/{page}
+```
+
+Retrieves invoices with pagination (8 per page).
+
+<ParamField path="page" type="integer" required>
+  Page number (0-indexed)
+</ParamField>
+
+<RequestExample>
+```bash cURL
+curl -X GET "https://api.investgo.com/api/listaFacturas/page/0" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200 - Success
+{
+  "content": [
+    {
+      "idFactura": 1,
+      "codFactura": "F-001",
+      "monto": 15000.00,
+      "fechaEmision": "2024-01-15",
+      "fechaPago": "2024-02-15",
+      "enable": "Activo"
+    }
+  ],
+  "pageable": {
+    "pageNumber": 0,
+    "pageSize": 8
+  },
+  "totalPages": 5,
+  "totalElements": 37
+}
+```
+</ResponseExample>
+
+---
+
+## Create Invoice
+
+```http
+POST /api/registrarFactura
+```
+
+Creates a new invoice.
+
+<Note>
+- Invoice code (codFactura) is auto-generated as "F-XXX" format
+- fechaEmision is automatically set to current date
+- Status (enable) is automatically set to "Activo"
+- Company must exist
+</Note>
+
+### Request Body
+
+<ParamField body="monto" type="double" required>
+  Invoice amount
+</ParamField>
+
+<ParamField body="fechaPago" type="date" required>
+  Expected payment date (format: yyyy-MM-dd)
+</ParamField>
+
+<ParamField body="descripcion" type="string" required>
+  Invoice description
+</ParamField>
+
+<ParamField body="empresa" type="object" required>
+  Company information
+  <Expandable title="properties">
+    <ParamField body="idEmpresa" type="integer" required>
+      Company ID
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<RequestExample>
+```bash cURL
+curl -X POST "https://api.investgo.com/api/registrarFactura" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -d '{
+    "monto": 15000.00,
+    "fechaPago": "2024-02-15",
+    "descripcion": "Servicio de consultoría",
+    "empresa": {
+      "idEmpresa": 1
+    }
+  }'
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200 - Success
+{
+  "mensaje": "Factura registrada exitosamente",
+  "factura": {
+    "idFactura": 1,
+    "codFactura": "F-001",
+    "monto": 15000.00,
+    "fechaEmision": "2024-03-15",
+    "fechaPago": "2024-02-15",
+    "enable": "Activo",
+    "descripcion": "Servicio de consultoría",
+    "empresa": {
+      "idEmpresa": 1,
+      "nomEmpresa": "Tech Solutions SAC"
+    }
+  }
+}
+```
+
+```json 404 - Company Not Found
+{
+  "mensaje": "No se encontró la empresa con el id: 999"
+}
+```
+</ResponseExample>
+
+---
+
+## Update Invoice
+
+```http
+PUT /api/actualizarFactura
+```
+
+Updates an existing invoice.
+
+<Warning>
+Can only update: monto, fechaPago, and descripcion. Cannot change invoice code, emission date, or company.
+</Warning>
+
+### Request Body
+
+<ParamField body="empresa" type="object" required>
+  <Expandable title="properties">
+    <ParamField body="idEmpresa" type="integer" required>
+      Company ID (used to identify the invoice)
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField body="monto" type="double">
+  Updated invoice amount
+</ParamField>
+
+<ParamField body="fechaPago" type="date">
+  Updated payment date
+</ParamField>
+
+<ParamField body="descripcion" type="string">
+  Updated description
+</ParamField>
+
+<RequestExample>
+```bash cURL
+curl -X PUT "https://api.investgo.com/api/actualizarFactura" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -d '{
+    "empresa": {
+      "idEmpresa": 1
+    },
+    "monto": 16000.00,
+    "fechaPago": "2024-03-15",
+    "descripcion": "Servicio de consultoría actualizado"
+  }'
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200 - Success
+{
+  "mensaje": "Factura actualizada exitosamente",
+  "factura": {
+    "idFactura": 1,
+    "monto": 16000.00,
+    "fechaPago": "2024-03-15",
+    "descripcion": "Servicio de consultoría actualizado"
+  }
+}
+```
+
+```json 409 - Invoice Not Found
+{
+  "mensaje": "No existe factura con id: 999"
+}
+```
+</ResponseExample>
+
+---
+
+## Delete Invoice (Soft Delete)
+
+```http
+DELETE /api/eliminarFactura/{id}
+```
+
+Soft deletes an invoice by setting status to "No Activo".
+
+<Note>
+This is a soft delete - the invoice is marked as inactive but not removed from the database.
+</Note>
+
+<ParamField path="id" type="integer" required>
+  Invoice ID to delete
+</ParamField>
+
+<RequestExample>
+```bash cURL
+curl -X DELETE "https://api.investgo.com/api/eliminarFactura/1" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200 - Success
+{
+  "mensaje": "Se eliminó exitosamente la factura"
+}
+```
+
+```json 409 - Invoice Not Found
+{
+  "mensaje": "No existe factura con id: 999"
+}
+```
+</ResponseExample>

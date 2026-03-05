@@ -1,0 +1,300 @@
+---
+title: 'Authentication'
+description: 'JWT-based authentication endpoints for the InvestGo platform'
+---
+
+## Overview
+
+The InvestGo platform uses JSON Web Tokens (JWT) for authentication. Users must first obtain a token by providing valid credentials, then include this token in the `Authorization` header for subsequent API requests.
+
+<Note>
+JWT tokens are valid for 10 hours from the time of generation. After expiration, users must re-authenticate to obtain a new token.
+</Note>
+
+---
+
+## Generate Token
+
+<Card title="POST /generate-token" icon="key">
+  Authenticates a user and generates a JWT token for API access.
+</Card>
+
+### Request Body
+
+<ParamField body="username" type="string" required>
+  The user's unique username
+</ParamField>
+
+<ParamField body="password" type="string" required>
+  The user's password
+</ParamField>
+
+### Response
+
+<ResponseField name="token" type="string">
+  The JWT token to be used for authenticated requests. Include this token in the `Authorization` header as `Bearer {token}` for subsequent API calls.
+</ResponseField>
+
+### Example Request
+
+```bash cURL
+curl -X POST https://api.investgo.com/generate-token \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "investor123",
+    "password": "securePassword123"
+  }'
+```
+
+```json Request Body
+{
+  "username": "investor123",
+  "password": "securePassword123"
+}
+```
+
+### Example Response
+
+```json 200 - Success
+{
+  "token": "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJpbnZlc3RvcjEyMyIsImV4cCI6MTYxNjIzOTAyMiwiaWF0IjoxNjE2MjAzMDIyfQ.8Z..."
+}
+```
+
+### Error Responses
+
+```json 500 - User Not Found
+{
+  "timestamp": "2026-03-05T10:15:30.000+00:00",
+  "status": 500,
+  "error": "Internal Server Error",
+  "message": "Usuario no encontrado",
+  "path": "/generate-token"
+}
+```
+
+```json 500 - Disabled User
+{
+  "timestamp": "2026-03-05T10:15:30.000+00:00",
+  "status": 500,
+  "error": "Internal Server Error",
+  "message": "Usuario deshabilitado",
+  "path": "/generate-token"
+}
+```
+
+```json 500 - Invalid Credentials
+{
+  "timestamp": "2026-03-05T10:15:30.000+00:00",
+  "status": 500,
+  "error": "Internal Server Error",
+  "message": "Credenciales ivalidas",
+  "path": "/generate-token"
+}
+```
+
+<Warning>
+This endpoint throws exceptions for authentication failures including:
+- **Usuario no encontrado**: User does not exist in the system
+- **Usuario deshabilitado**: User account has been disabled
+- **Credenciales ivalidas**: Username or password is incorrect
+</Warning>
+
+---
+
+## Get Current User
+
+<Card title="GET /actual-usuario" icon="user">
+  Retrieves the complete profile information for the currently authenticated user.
+</Card>
+
+### Authentication
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token obtained from the `/generate-token` endpoint.
+  
+  Format: `Bearer {token}`
+</ParamField>
+
+### Response
+
+<ResponseField name="id" type="long">
+  Unique identifier for the user
+</ResponseField>
+
+<ResponseField name="nombre" type="string">
+  User's first name
+</ResponseField>
+
+<ResponseField name="apellidoPa" type="string">
+  User's paternal last name
+</ResponseField>
+
+<ResponseField name="apellidoMa" type="string">
+  User's maternal last name
+</ResponseField>
+
+<ResponseField name="telefono" type="string">
+  User's phone number
+</ResponseField>
+
+<ResponseField name="correo" type="string">
+  User's email address
+</ResponseField>
+
+<ResponseField name="username" type="string">
+  User's unique username
+</ResponseField>
+
+<ResponseField name="password" type="string">
+  Encrypted password (hashed)
+</ResponseField>
+
+<ResponseField name="foto" type="string">
+  URL or path to user's profile photo
+</ResponseField>
+
+<ResponseField name="fecha" type="string">
+  User's registration or birth date in `yyyy-MM-dd` format (America/Lima timezone)
+</ResponseField>
+
+<ResponseField name="dni" type="string">
+  User's national identification number (DNI)
+</ResponseField>
+
+<ResponseField name="enable" type="string">
+  User account status
+</ResponseField>
+
+<ResponseField name="idTipoUsu" type="long">
+  User role type identifier
+</ResponseField>
+
+<ResponseField name="tiporol" type="object">
+  User's role information
+  
+  <Expandable title="tiporol properties">
+    <ResponseField name="idTipoUsu" type="long">
+      Role identifier
+    </ResponseField>
+    
+    <ResponseField name="tipo" type="string">
+      Role name (e.g., "ADMIN", "INVESTOR", "COMPANY")
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="authorities" type="array">
+  List of granted authorities for the user based on their role
+</ResponseField>
+
+<ResponseField name="accountNonExpired" type="boolean">
+  Indicates if the account is not expired (always `true`)
+</ResponseField>
+
+<ResponseField name="accountNonLocked" type="boolean">
+  Indicates if the account is not locked (always `true`)
+</ResponseField>
+
+<ResponseField name="credentialsNonExpired" type="boolean">
+  Indicates if the credentials are not expired (always `true`)
+</ResponseField>
+
+<ResponseField name="enabled" type="boolean">
+  Indicates if the account is enabled (always `true`)
+</ResponseField>
+
+### Example Request
+
+```bash cURL
+curl -X GET https://api.investgo.com/actual-usuario \
+  -H "Authorization: Bearer eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJpbnZlc3RvcjEyMyIsImV4cCI6MTYxNjIzOTAyMiwiaWF0IjoxNjE2MjAzMDIyfQ.8Z..."
+```
+
+### Example Response
+
+```json 200 - Success
+{
+  "id": 1,
+  "nombre": "Juan",
+  "apellidoPa": "Pérez",
+  "apellidoMa": "García",
+  "telefono": "+51987654321",
+  "correo": "juan.perez@email.com",
+  "username": "investor123",
+  "password": "$2a$10$slYQmyNdGzTn7ZLBXBChFOC9f6kFjAqPhccnP6DxlWXx2lPk1C3G6",
+  "foto": "/uploads/profiles/user1.jpg",
+  "fecha": "2025-01-15",
+  "dni": "12345678",
+  "enable": "true",
+  "idTipoUsu": 2,
+  "tiporol": {
+    "idTipoUsu": 2,
+    "tipo": "INVESTOR"
+  },
+  "authorities": [
+    {
+      "authority": "INVESTOR"
+    }
+  ],
+  "accountNonExpired": true,
+  "accountNonLocked": true,
+  "credentialsNonExpired": true,
+  "enabled": true
+}
+```
+
+### Error Responses
+
+```json 401 - Unauthorized
+{
+  "timestamp": "2026-03-05T10:15:30.000+00:00",
+  "status": 401,
+  "error": "Unauthorized",
+  "message": "Full authentication is required to access this resource",
+  "path": "/actual-usuario"
+}
+```
+
+```json 403 - Forbidden (Invalid or Expired Token)
+{
+  "timestamp": "2026-03-05T10:15:30.000+00:00",
+  "status": 403,
+  "error": "Forbidden",
+  "message": "Access Denied",
+  "path": "/actual-usuario"
+}
+```
+
+<Note>
+The password field in the response is encrypted and cannot be used to authenticate. This is the BCrypt hashed version stored in the database.
+</Note>
+
+---
+
+## Authentication Flow
+
+1. **Obtain Token**: Call `POST /generate-token` with username and password
+2. **Store Token**: Save the returned JWT token securely on the client side
+3. **Use Token**: Include the token in the `Authorization` header for all subsequent requests
+4. **Refresh**: Generate a new token before the 10-hour expiration period
+
+### Token Usage Example
+
+Once you have obtained a token, include it in your API requests:
+
+```bash
+Authorization: Bearer eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJpbnZlc3RvcjEyMyIsImV4cCI6MTYxNjIzOTAyMiwiaWF0IjoxNjE2MjAzMDIyfQ.8Z...
+```
+
+<Warning>
+Keep your JWT token secure. Do not expose it in client-side code, logs, or URLs. Treat it like a password.
+</Warning>
+
+## Security Considerations
+
+- Tokens are signed using HS512 algorithm
+- Token expiration is set to 10 hours (36,000,000 milliseconds)
+- All authentication endpoints support CORS for cross-origin requests
+- Failed authentication attempts will throw descriptive exceptions
+- User accounts can be disabled to prevent access even with valid credentials

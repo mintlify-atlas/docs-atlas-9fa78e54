@@ -1,0 +1,169 @@
+---
+title: 'Banks'
+description: 'Manage bank information for transactions'
+---
+
+## List All Banks
+
+```http
+GET /api/listarBancos
+```
+
+Retrieves all available banks in the system.
+
+<Note>
+This endpoint provides a catalog of supported banks for users to link their bank accounts.
+</Note>
+
+<RequestExample>
+```bash cURL
+curl -X GET "https://api.investgo.com/api/listarBancos" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200 - Success
+[
+  {
+    "idBancos": 1,
+    "nomBancos": "Banco de Crédito del Perú"
+  },
+  {
+    "idBancos": 2,
+    "nomBancos": "BBVA Continental"
+  },
+  {
+    "idBancos": 3,
+    "nomBancos": "Scotiabank Perú"
+  },
+  {
+    "idBancos": 4,
+    "nomBancos": "Interbank"
+  },
+  {
+    "idBancos": 5,
+    "nomBancos": "Banco Pichincha"
+  },
+  {
+    "idBancos": 6,
+    "nomBancos": "Banco de la Nación"
+  },
+  {
+    "idBancos": 7,
+    "nomBancos": "Banco GNB Perú"
+  },
+  {
+    "idBancos": 8,
+    "nomBancos": "Banco Falabella"
+  },
+  {
+    "idBancos": 9,
+    "nomBancos": "Banco Ripley"
+  },
+  {
+    "idBancos": 10,
+    "nomBancos": "Banco Azteca"
+  }
+]
+```
+</ResponseExample>
+
+---
+
+## Bank Schema
+
+<ResponseField name="idBancos" type="integer">
+  Bank unique identifier
+</ResponseField>
+
+<ResponseField name="nomBancos" type="string">
+  Bank name
+</ResponseField>
+
+---
+
+## Usage in Bank Accounts
+
+Banks are referenced when users create bank accounts (CuentaBancaria). The bank ID from this list is used to associate a user's bank account with a specific bank.
+
+### Typical Flow
+
+1. **List Available Banks**
+   ```bash
+   GET /api/listarBancos
+   ```
+   User sees all supported banks
+
+2. **User Selects Bank**
+   User chooses a bank from the list (e.g., idBancos: 1 for BCP)
+
+3. **Create Bank Account**
+   ```bash
+   POST /api/registrarCuentaBancaria
+   {
+     "nroCuenta": "123456789",
+     "saldo": 10000.00,
+     "idBancos": 1,
+     "idUsu": 5
+   }
+   ```
+
+4. **Perform Transactions**
+   User can now deposit/withdraw using their linked bank account
+
+---
+
+## Supported Banks
+
+The InvestGo platform currently supports the following Peruvian banks:
+
+| Bank ID | Bank Name |
+|---------|----------|
+| 1 | Banco de Crédito del Perú (BCP) |
+| 2 | BBVA Continental |
+| 3 | Scotiabank Perú |
+| 4 | Interbank |
+| 5 | Banco Pichincha |
+| 6 | Banco de la Nación |
+| 7 | Banco GNB Perú |
+| 8 | Banco Falabella |
+| 9 | Banco Ripley |
+| 10 | Banco Azteca |
+
+<Note>
+The bank list is managed by administrators. Contact support to request adding support for additional banks.
+</Note>
+
+---
+
+## Integration Notes
+
+<Warning>
+This endpoint provides reference data only. The actual bank account management (CuentaBancaria) requires separate endpoints that are not included in these controllers.
+</Warning>
+
+### Bank Account Relationship
+
+The bank information is used in the CuentaBancaria (Bank Account) entity:
+
+```json Bank Account Example
+{
+  "idCuentaBancaria": 1,
+  "nroCuenta": "123456789",
+  "saldo": 15000.00,
+  "idBancos": 1,
+  "banco": {
+    "idBancos": 1,
+    "nomBancos": "Banco de Crédito del Perú"
+  },
+  "idUsu": 5
+}
+```
+
+### Used In
+
+- **Transaction Deposits**: Bank accounts linked to specific banks
+- **Transaction Withdrawals**: Bank accounts linked to specific banks
+- **User Profile**: Display user's linked bank accounts with bank names
+- **Admin Panel**: Bank account management and monitoring

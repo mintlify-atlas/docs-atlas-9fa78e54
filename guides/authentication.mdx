@@ -1,0 +1,382 @@
+---
+title: 'Authentication'
+description: 'Learn how to authenticate users with JWT tokens in the InvestGo platform'
+---
+
+## Overview
+
+InvestGo uses JWT (JSON Web Token) based authentication to secure API endpoints. The platform implements a stateless authentication mechanism where users receive a token after successful login, which must be included in subsequent requests.
+
+## Authentication Flow
+
+<Steps>
+  <Step title="User Login">
+    Send credentials to the `/generate-token` endpoint to receive a JWT token.
+  </Step>
+  
+  <Step title="Token Storage">
+    Store the received token securely on the client side (e.g., localStorage, sessionStorage, or memory).
+  </Step>
+  
+  <Step title="Include Token in Requests">
+    Add the token to the `Authorization` header for all protected API requests.
+  </Step>
+  
+  <Step title="Token Validation">
+    The server validates the token on each request using the JWT filter chain.
+  </Step>
+</Steps>
+
+## Generating a Token
+
+### Endpoint
+
+```
+POST /generate-token
+```
+
+### Request Body
+
+<CodeGroup>
+```json Request
+{
+  "username": "jamie",
+  "password": "Admin12345"
+}
+```
+
+```json Response
+{
+  "token": "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJqYW1pZSIsImV4cCI6MTY4..."
+}
+```
+</CodeGroup>
+
+### Example: Login Request
+
+<CodeGroup>
+```javascript JavaScript/Fetch
+const login = async (username, password) => {
+  const response = await fetch('http://localhost:8091/generate-token', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ username, password })
+  });
+  
+  if (!response.ok) {
+    throw new Error('Authentication failed');
+  }
+  
+  const data = await response.json();
+  // Store token securely
+  localStorage.setItem('token', data.token);
+  return data.token;
+};
+```
+
+```python Python/Requests
+import requests
+
+def login(username, password):
+    url = "http://localhost:8091/generate-token"
+    payload = {
+        "username": username,
+        "password": password
+    }
+    
+    response = requests.post(url, json=payload)
+    
+    if response.status_code == 200:
+        token = response.json()["token"]
+        return token
+    else:
+        raise Exception("Authentication failed")
+```
+
+```java Java/RestTemplate
+public String login(String username, String password) {
+    RestTemplate restTemplate = new RestTemplate();
+    String url = "http://localhost:8091/generate-token";
+    
+    JwtRequest request = new JwtRequest(username, password);
+    
+    ResponseEntity<JwtResponse> response = restTemplate.postForEntity(
+        url, 
+        request, 
+        JwtResponse.class
+    );
+    
+    return response.getBody().getToken();
+}
+```
+</CodeGroup>
+
+## Using the Token
+
+Once you have a token, include it in the `Authorization` header with the `Bearer` prefix for all protected endpoints.
+
+### Header Format
+
+```
+Authorization: Bearer <your-token-here>
+```
+
+### Example: Making Authenticated Requests
+
+<CodeGroup>
+```javascript JavaScript/Fetch
+const getProtectedData = async () => {
+  const token = localStorage.getItem('token');
+  
+  const response = await fetch('http://localhost:8091/facturas', {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  });
+  
+  return response.json();
+};
+```
+
+```python Python/Requests
+def get_protected_data(token):
+    url = "http://localhost:8091/facturas"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json"
+    }
+    
+    response = requests.get(url, headers=headers)
+    return response.json()
+```
+
+```java Java/RestTemplate
+public ResponseEntity<?> getProtectedData(String token) {
+    RestTemplate restTemplate = new RestTemplate();
+    
+    HttpHeaders headers = new HttpHeaders();
+    headers.set("Authorization", "Bearer " + token);
+    
+    HttpEntity<String> entity = new HttpEntity<>(headers);
+    
+    return restTemplate.exchange(
+        "http://localhost:8091/facturas",
+        HttpMethod.GET,
+        entity,
+        String.class
+    );
+}
+```
+</CodeGroup>
+
+## Getting Current User
+
+Retrieve information about the currently authenticated user.
+
+### Endpoint
+
+```
+GET /actual-usuario
+```
+
+### Request
+
+<CodeGroup>
+```javascript JavaScript
+const getCurrentUser = async () => {
+  const token = localStorage.getItem('token');
+  
+  const response = await fetch('http://localhost:8091/actual-usuario', {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
+  
+  return response.json();
+};
+```
+
+```python Python
+def get_current_user(token):
+    url = "http://localhost:8091/actual-usuario"
+    headers = {"Authorization": f"Bearer {token}"}
+    
+    response = requests.get(url, headers=headers)
+    return response.json()
+```
+</CodeGroup>
+
+### Response Example
+
+```json
+{
+  "id": 1,
+  "username": "jamie",
+  "nombre": "Jeimy",
+  "apellidoPa": "Apolaya",
+  "apellidoMa": "Jurado",
+  "correo": "apolaya@gmail.com",
+  "telefono": "938311721",
+  "idTipoUsu": 2,
+  "enable": "Activo"
+}
+```
+
+## Token Structure and Configuration
+
+### JWT Configuration
+
+The JWT implementation uses the following configuration (from `JwtUtils.java:18,48`):
+
+- **Secret Key**: `examportal`
+- **Signature Algorithm**: HS512 (HMAC-SHA512)
+- **Token Expiration**: 10 hours (36,000,000 milliseconds)
+- **Claims**: Subject (username) + issued/expiration timestamps
+
+### Token Claims
+
+Each JWT token contains:
+
+| Claim | Description |
+|-------|-------------|
+| `sub` | Subject - the username of the authenticated user |
+| `iat` | Issued At - timestamp when the token was created |
+| `exp` | Expiration - timestamp when the token expires (10 hours from issue) |
+
+<Info>
+Tokens are valid for **10 hours** from the time of generation. After expiration, users must re-authenticate to receive a new token.
+</Info>
+
+## Token Validation Process
+
+When a request is received with a token, the following validation occurs (`JwtAuthenticationFilter.java:30-64`):
+
+<Steps>
+  <Step title="Extract Token">
+    The filter extracts the token from the `Authorization` header, expecting format `Bearer <token>`.
+  </Step>
+  
+  <Step title="Parse Username">
+    The username is extracted from the token's subject claim.
+  </Step>
+  
+  <Step title="Load User Details">
+    User details are loaded from the database using the extracted username.
+  </Step>
+  
+  <Step title="Validate Token">
+    Token is validated by checking:
+    - Username matches user details
+    - Token has not expired
+  </Step>
+  
+  <Step title="Set Authentication">
+    If valid, a `UsernamePasswordAuthenticationToken` is created and set in the SecurityContext.
+  </Step>
+</Steps>
+
+## Error Handling
+
+### Common Authentication Errors
+
+<Accordion title="401 Unauthorized - Invalid Credentials">
+  **Cause**: Incorrect username or password.
+  
+  **Error Message**: `"Credenciales ivalidas"`
+  
+  **Solution**: Verify the username and password are correct.
+</Accordion>
+
+<Accordion title="401 Unauthorized - Disabled User">
+  **Cause**: User account has been disabled.
+  
+  **Error Message**: `"Usuario deshabilitado"`
+  
+  **Solution**: Contact an administrator to enable the account.
+</Accordion>
+
+<Accordion title="401 Unauthorized - User Not Found">
+  **Cause**: Username does not exist in the system.
+  
+  **Error Message**: `"Usuario no encontrado"`
+  
+  **Solution**: Register a new account or verify the username.
+</Accordion>
+
+<Accordion title="Token Expired">
+  **Cause**: JWT token has passed its 10-hour expiration time.
+  
+  **Console Log**: `"El token ha expirado"`
+  
+  **Solution**: Re-authenticate to obtain a new token.
+</Accordion>
+
+<Accordion title="Invalid Token Format">
+  **Cause**: Token doesn't start with "Bearer " prefix or is malformed.
+  
+  **Console Log**: `"Token invalido, no empieza con bearer String"`
+  
+  **Solution**: Ensure the Authorization header uses format: `Bearer <token>`
+</Accordion>
+
+## Best Practices
+
+<Warning>
+  **Security Recommendations**:
+  - Store tokens securely (avoid localStorage in production; use httpOnly cookies or secure storage)
+  - Never expose tokens in URLs or logs
+  - Implement token refresh mechanism for better UX
+  - Use HTTPS in production to prevent token interception
+  - Clear tokens on logout
+</Warning>
+
+### Token Refresh Strategy
+
+Since tokens expire after 10 hours, implement one of these strategies:
+
+1. **Re-authenticate before expiration**: Check token expiration time and prompt user to re-login
+2. **Silent refresh**: Implement a refresh token mechanism (requires backend enhancement)
+3. **Automatic re-login**: Store credentials securely and auto-renew token (use with caution)
+
+### Handling Expired Tokens
+
+```javascript
+const makeAuthenticatedRequest = async (url, options = {}) => {
+  const token = localStorage.getItem('token');
+  
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      ...options.headers,
+      'Authorization': `Bearer ${token}`
+    }
+  });
+  
+  if (response.status === 401) {
+    // Token expired or invalid - redirect to login
+    localStorage.removeItem('token');
+    window.location.href = '/login';
+    return;
+  }
+  
+  return response.json();
+};
+```
+
+## Related Configuration Files
+
+- **JWT Utilities**: `src/main/java/com/proyecto/integrador/configuraciones/JwtUtils.java`
+- **Authentication Filter**: `src/main/java/com/proyecto/integrador/configuraciones/JwtAuthenticationFilter.java`
+- **Authentication Controller**: `src/main/java/com/proyecto/integrador/controladores/AuthenticationController.java`
+- **Request/Response DTOs**: `src/main/java/com/proyecto/integrador/dto/JwtRequest.java` and `JwtResponse.java`
+
+## Next Steps
+
+- Learn about [Role-Based Access Control](/guides/security#role-based-access)
+- Explore [Protected Endpoints](/guides/security#protected-endpoints)
+- Review [Security Configuration](/guides/security)

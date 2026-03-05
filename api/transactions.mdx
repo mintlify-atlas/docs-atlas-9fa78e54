@@ -1,0 +1,391 @@
+---
+title: 'Transactions'
+description: 'Manage deposits and withdrawals between wallets and bank accounts'
+---
+
+## List Transaction Types
+
+```http
+GET /api/listaTipoTransacciones
+```
+
+Retrieves all available transaction types.
+
+<RequestExample>
+```bash cURL
+curl -X GET "https://api.investgo.com/api/listaTipoTransacciones" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200 - Success
+[
+  {
+    "idTipoTransaccion": 1,
+    "nombre": "Deposito"
+  },
+  {
+    "idTipoTransaccion": 2,
+    "nombre": "Retiro"
+  }
+]
+```
+</ResponseExample>
+
+---
+
+## List All Transactions (Admin)
+
+```http
+GET /api/admin/listaTransacciones
+```
+
+Retrieves all transactions in the system.
+
+<Warning>
+Admin authentication required
+</Warning>
+
+<RequestExample>
+```bash cURL
+curl -X GET "https://api.investgo.com/api/admin/listaTransacciones" \
+  -H "Authorization: Bearer ADMIN_TOKEN"
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200 - Success
+[
+  {
+    "idTransaccion": 1,
+    "monto": 5000.00,
+    "fecha": "2024-03-15",
+    "idCuentaBancaria": 1,
+    "idTipoTransaccion": 1,
+    "cuentaBancaria": {
+      "idCuentaBancaria": 1,
+      "nroCuenta": "123456789"
+    },
+    "tipoTransaccion": {
+      "idTipoTransaccion": 1,
+      "nombre": "Deposito"
+    }
+  }
+]
+```
+</ResponseExample>
+
+---
+
+## List User Transactions
+
+```http
+GET /api/user/listaTransacciones
+```
+
+Retrieves all transactions for the authenticated user.
+
+<Warning>
+User authentication required. Uses session to identify current user.
+</Warning>
+
+<RequestExample>
+```bash cURL
+curl -X GET "https://api.investgo.com/api/user/listaTransacciones" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Cookie: JSESSIONID=your_session_id"
+```
+</RequestExample>
+
+---
+
+## List User Transactions (Paginated)
+
+```http
+GET /api/user/listTransacciones/page/{page}
+```
+
+Retrieves user transactions with pagination (8 per page).
+
+<Warning>
+Requires authenticated session
+</Warning>
+
+<ParamField path="page" type="integer" required>
+  Page number (0-indexed)
+</ParamField>
+
+<RequestExample>
+```bash cURL
+curl -X GET "https://api.investgo.com/api/user/listTransacciones/page/0" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Cookie: JSESSIONID=your_session_id"
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200 - Success
+{
+  "content": [
+    {
+      "idTransaccion": 1,
+      "monto": 5000.00,
+      "fecha": "2024-03-15",
+      "idCuentaBancaria": 1,
+      "idTipoTransaccion": 1
+    }
+  ],
+  "totalPages": 3,
+  "totalElements": 22,
+  "pageNumber": 0,
+  "pageSize": 8
+}
+```
+</ResponseExample>
+
+---
+
+## List Transactions by Bank Account
+
+```http
+GET /api/user/listaTransacciones/{id}
+```
+
+Retrieves transactions for a specific bank account of the authenticated user.
+
+<Warning>
+Requires authenticated session. Only returns transactions for user's own bank accounts.
+</Warning>
+
+<ParamField path="id" type="long" required>
+  Bank account ID
+</ParamField>
+
+<RequestExample>
+```bash cURL
+curl -X GET "https://api.investgo.com/api/user/listaTransacciones/1" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Cookie: JSESSIONID=your_session_id"
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200 - Success
+[
+  {
+    "idTransaccion": 1,
+    "monto": 5000.00,
+    "fecha": "2024-03-15",
+    "idCuentaBancaria": 1,
+    "idTipoTransaccion": 1
+  },
+  {
+    "idTransaccion": 2,
+    "monto": 2000.00,
+    "fecha": "2024-03-16",
+    "idCuentaBancaria": 1,
+    "idTipoTransaccion": 2
+  }
+]
+```
+</ResponseExample>
+
+---
+
+## Create Deposit
+
+```http
+POST /api/deposito
+```
+
+Deposits funds from a bank account to the user's wallet (cartera).
+
+<Warning>
+Requires authenticated session. Bank account must belong to the authenticated user.
+</Warning>
+
+<Note>
+- Transfers money from bank account to wallet
+- Transaction date is automatically set to current date
+- Transaction type is automatically set to 1 (Deposito)
+- Bank account balance must be sufficient
+- Updates both bank account and wallet balances atomically
+</Note>
+
+### Request Body
+
+<ParamField body="monto" type="double" required>
+  Amount to deposit
+</ParamField>
+
+<ParamField body="idCuentaBancaria" type="integer" required>
+  Bank account ID to deposit from
+</ParamField>
+
+<RequestExample>
+```bash cURL
+curl -X POST "https://api.investgo.com/api/deposito" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Cookie: JSESSIONID=your_session_id" \
+  -d '{
+    "monto": 5000.00,
+    "idCuentaBancaria": 1
+  }'
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200 - Success
+{
+  "mensaje": "Deposito realizado con exito"
+}
+```
+
+```json 400 - Insufficient Bank Account Balance
+{
+  "mensaje": "No cuenta con saldo suficiente en su cuenta Bancaria!"
+}
+```
+
+```json 400 - Bank Account Not Found
+{
+  "mensaje": "La cuenta bancaria con Id: 999 no existe"
+}
+```
+</ResponseExample>
+
+---
+
+## Create Withdrawal
+
+```http
+POST /api/retiro
+```
+
+Withdraws funds from the user's wallet (cartera) to a bank account.
+
+<Warning>
+Requires authenticated session. Bank account must belong to the authenticated user.
+</Warning>
+
+<Note>
+- Transfers money from wallet to bank account
+- Transaction date is automatically set to current date
+- Transaction type is automatically set to 2 (Retiro)
+- Wallet balance must be sufficient
+- Updates both wallet and bank account balances atomically
+</Note>
+
+### Request Body
+
+<ParamField body="monto" type="double" required>
+  Amount to withdraw
+</ParamField>
+
+<ParamField body="idCuentaBancaria" type="integer" required>
+  Bank account ID to withdraw to
+</ParamField>
+
+<RequestExample>
+```bash cURL
+curl -X POST "https://api.investgo.com/api/retiro" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Cookie: JSESSIONID=your_session_id" \
+  -d '{
+    "monto": 3000.00,
+    "idCuentaBancaria": 1
+  }'
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200 - Success
+{
+  "mensaje": "Retiro realizado con exito"
+}
+```
+
+```json 400 - Insufficient Wallet Balance
+{
+  "mensaje": "No cuenta con saldo suficiente en su cartera!"
+}
+```
+
+```json 400 - Bank Account Not Found
+{
+  "mensaje": "La cuenta bancaria con Id: 999 no existe"
+}
+```
+</ResponseExample>
+
+---
+
+## Transaction Flow
+
+### Deposit Flow
+1. User initiates deposit from bank account
+2. System validates bank account belongs to user
+3. System checks bank account has sufficient balance
+4. Bank account balance is decreased
+5. Wallet balance is increased
+6. Transaction record is created with type "Deposito"
+
+### Withdrawal Flow
+1. User initiates withdrawal to bank account
+2. System validates bank account belongs to user
+3. System checks wallet has sufficient balance
+4. Wallet balance is decreased
+5. Bank account balance is increased
+6. Transaction record is created with type "Retiro"
+
+### Transaction Schema
+
+<ResponseField name="idTransaccion" type="long">
+  Transaction unique identifier
+</ResponseField>
+
+<ResponseField name="monto" type="double">
+  Transaction amount
+</ResponseField>
+
+<ResponseField name="fecha" type="date">
+  Transaction date (format: yyyy-MM-dd)
+</ResponseField>
+
+<ResponseField name="idCuentaBancaria" type="integer">
+  Bank account ID involved in transaction
+</ResponseField>
+
+<ResponseField name="idTipoTransaccion" type="long">
+  Transaction type ID (1 = Deposito, 2 = Retiro)
+</ResponseField>
+
+<ResponseField name="cuentaBancaria" type="object">
+  Bank account details
+  <Expandable title="properties">
+    <ResponseField name="idCuentaBancaria" type="integer">
+      Bank account ID
+    </ResponseField>
+    <ResponseField name="nroCuenta" type="string">
+      Account number
+    </ResponseField>
+    <ResponseField name="saldo" type="double">
+      Current balance
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="tipoTransaccion" type="object">
+  Transaction type details
+  <Expandable title="properties">
+    <ResponseField name="idTipoTransaccion" type="long">
+      Type ID
+    </ResponseField>
+    <ResponseField name="nombre" type="string">
+      Type name (Deposito or Retiro)
+    </ResponseField>
+  </Expandable>
+</ResponseField>

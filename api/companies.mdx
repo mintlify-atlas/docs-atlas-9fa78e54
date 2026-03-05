@@ -1,0 +1,389 @@
+---
+title: 'Companies'
+description: 'Manage company profiles for factoring'
+---
+
+## Search Companies by Keyword
+
+```http
+GET /api/active/buscarEmpresasContains/{keyWord}
+```
+
+Searches for active companies by business name (razonSocial) containing the keyword.
+
+<ParamField path="keyWord" type="string" required>
+  Search keyword
+</ParamField>
+
+<RequestExample>
+```bash cURL
+curl -X GET "https://api.investgo.com/api/active/buscarEmpresasContains/Tech" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+</RequestExample>
+
+---
+
+## List Companies (Paginated)
+
+```http
+GET /api/buscarEmpresas/{page}
+```
+
+Retrieves companies with pagination (6 per page).
+
+<ParamField path="page" type="integer" required>
+  Page number (0-indexed)
+</ParamField>
+
+<RequestExample>
+```bash cURL
+curl -X GET "https://api.investgo.com/api/buscarEmpresas/0" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200 - Success
+{
+  "content": [
+    {
+      "idEmpresa": 1,
+      "representanteLegal": "Carlos Mendoza",
+      "nomEmpresa": "Tech Solutions SAC",
+      "ruc": "20123456789",
+      "razonSocial": "Tech Solutions Sociedad Anónima Cerrada",
+      "fechaDeInicioActv": "2020-01-15",
+      "direccion": "Av. Principal 123, Lima",
+      "telefono": "987654321",
+      "correo": "info@techsolutions.com",
+      "sector": "Tecnología",
+      "fechRegistro": "2024-01-10",
+      "enable": "Activo",
+      "idRiesgo": 3
+    }
+  ],
+  "totalPages": 3,
+  "totalElements": 15,
+  "pageNumber": 0,
+  "pageSize": 6
+}
+```
+</ResponseExample>
+
+---
+
+## List Active Companies
+
+```http
+GET /api/active/listaEmpresas
+```
+
+Retrieves all active companies (excludes "No Activo" companies).
+
+<RequestExample>
+```bash cURL
+curl -X GET "https://api.investgo.com/api/active/listaEmpresas" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+</RequestExample>
+
+---
+
+## List All Companies
+
+```http
+GET /api/listaEmpresas
+```
+
+Retrieves all companies in the system.
+
+<RequestExample>
+```bash cURL
+curl -X GET "https://api.investgo.com/api/listaEmpresas" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200 - Success
+[
+  {
+    "idEmpresa": 1,
+    "representanteLegal": "Carlos Mendoza",
+    "nomEmpresa": "Tech Solutions SAC",
+    "ruc": "20123456789",
+    "razonSocial": "Tech Solutions Sociedad Anónima Cerrada",
+    "fechaDeInicioActv": "2020-01-15",
+    "direccion": "Av. Principal 123, Lima",
+    "telefono": "987654321",
+    "correo": "info@techsolutions.com",
+    "sector": "Tecnología",
+    "fechRegistro": "2024-01-10",
+    "enable": "Activo",
+    "idRiesgo": 3
+  }
+]
+```
+</ResponseExample>
+
+---
+
+## Register Company
+
+```http
+POST /api/registrarEmpresa
+```
+
+Creates a new company profile.
+
+<Note>
+- Email, RUC, and business name (razonSocial) must be unique
+- Registration date is automatically set to current date
+- Status is automatically set to "Activo"
+- Risk level (idRiesgo) is automatically set to 3 (medium risk)
+</Note>
+
+### Request Body
+
+<ParamField body="representanteLegal" type="string" required>
+  Legal representative's name
+</ParamField>
+
+<ParamField body="nomEmpresa" type="string" required>
+  Company name
+</ParamField>
+
+<ParamField body="ruc" type="string" required>
+  Company tax ID (RUC - must be unique)
+</ParamField>
+
+<ParamField body="razonSocial" type="string" required>
+  Business legal name (must be unique)
+</ParamField>
+
+<ParamField body="fechaDeInicioActv" type="date" required>
+  Business start date (format: yyyy-MM-dd)
+</ParamField>
+
+<ParamField body="direccion" type="string" required>
+  Company address
+</ParamField>
+
+<ParamField body="telefono" type="string" required>
+  Company phone number
+</ParamField>
+
+<ParamField body="correo" type="string" required>
+  Company email (must be unique)
+</ParamField>
+
+<ParamField body="sector" type="string" required>
+  Business sector/industry
+</ParamField>
+
+<RequestExample>
+```bash cURL
+curl -X POST "https://api.investgo.com/api/registrarEmpresa" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -d '{
+    "representanteLegal": "Carlos Mendoza",
+    "nomEmpresa": "Tech Solutions SAC",
+    "ruc": "20123456789",
+    "razonSocial": "Tech Solutions Sociedad Anónima Cerrada",
+    "fechaDeInicioActv": "2020-01-15",
+    "direccion": "Av. Principal 123, Lima",
+    "telefono": "987654321",
+    "correo": "info@techsolutions.com",
+    "sector": "Tecnología"
+  }'
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200 - Success
+{
+  "mensaje": "Empresa registrada exitosamente",
+  "empresa": {
+    "idEmpresa": 1,
+    "representanteLegal": "Carlos Mendoza",
+    "nomEmpresa": "Tech Solutions SAC",
+    "ruc": "20123456789",
+    "razonSocial": "Tech Solutions Sociedad Anónima Cerrada",
+    "fechaDeInicioActv": "2020-01-15",
+    "direccion": "Av. Principal 123, Lima",
+    "telefono": "987654321",
+    "correo": "info@techsolutions.com",
+    "sector": "Tecnología",
+    "fechRegistro": "2024-03-15",
+    "enable": "Activo",
+    "idRiesgo": 3
+  }
+}
+```
+
+```json 409 - Email Already Exists
+{
+  "mensaje": "El correo ya existe"
+}
+```
+
+```json 409 - RUC Already Exists
+{
+  "mensaje": "El Ruc ya existe"
+}
+```
+
+```json 409 - Business Name Already Exists
+{
+  "mensaje": "La Razon social ya existe"
+}
+```
+</ResponseExample>
+
+---
+
+## Update Company
+
+```http
+PUT /api/actualizarEmpresa
+```
+
+Updates an existing company profile.
+
+<Warning>
+Email, RUC, and business name must remain unique. Registration date and status are preserved from the original record.
+</Warning>
+
+### Request Body
+
+<ParamField body="idEmpresa" type="integer" required>
+  Company ID to update
+</ParamField>
+
+<ParamField body="representanteLegal" type="string">
+  Updated legal representative name
+</ParamField>
+
+<ParamField body="nomEmpresa" type="string">
+  Updated company name
+</ParamField>
+
+<ParamField body="ruc" type="string">
+  Updated RUC (must be unique)
+</ParamField>
+
+<ParamField body="razonSocial" type="string">
+  Updated business legal name (must be unique)
+</ParamField>
+
+<ParamField body="fechaDeInicioActv" type="date">
+  Updated business start date
+</ParamField>
+
+<ParamField body="direccion" type="string">
+  Updated address
+</ParamField>
+
+<ParamField body="telefono" type="string">
+  Updated phone
+</ParamField>
+
+<ParamField body="correo" type="string">
+  Updated email (must be unique)
+</ParamField>
+
+<ParamField body="sector" type="string">
+  Updated business sector
+</ParamField>
+
+<ParamField body="idRiesgo" type="integer">
+  Updated risk level
+</ParamField>
+
+<RequestExample>
+```bash cURL
+curl -X PUT "https://api.investgo.com/api/actualizarEmpresa" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -d '{
+    "idEmpresa": 1,
+    "representanteLegal": "Carlos Mendoza García",
+    "nomEmpresa": "Tech Solutions SAC",
+    "ruc": "20123456789",
+    "razonSocial": "Tech Solutions Sociedad Anónima Cerrada",
+    "fechaDeInicioActv": "2020-01-15",
+    "direccion": "Av. Principal 456, Lima",
+    "telefono": "987654322",
+    "correo": "contacto@techsolutions.com",
+    "sector": "Tecnología",
+    "idRiesgo": 2
+  }'
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200 - Success
+{
+  "mensaje": "Empresa actualizada exitosamente",
+  "empresa": {
+    "idEmpresa": 1,
+    "representanteLegal": "Carlos Mendoza García",
+    "direccion": "Av. Principal 456, Lima",
+    "telefono": "987654322"
+  }
+}
+```
+
+```json 409 - Company Not Found
+{
+  "mensaje": "No existe empresa con id: 999"
+}
+```
+
+```json 409 - Email Already Exists
+{
+  "mensaje": "El correo ya existe"
+}
+```
+</ResponseExample>
+
+---
+
+## Delete Company (Soft Delete)
+
+```http
+DELETE /api/eliminarEmpresa/{id}
+```
+
+Soft deletes a company by setting status to "No Activo".
+
+<Note>
+This is a soft delete - the company is marked as inactive but not removed from the database.
+</Note>
+
+<ParamField path="id" type="integer" required>
+  Company ID to delete
+</ParamField>
+
+<RequestExample>
+```bash cURL
+curl -X DELETE "https://api.investgo.com/api/eliminarEmpresa/1" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200 - Success
+{
+  "mensaje": "Se elimino exitosamente la empresa"
+}
+```
+
+```json 409 - Company Not Found
+{
+  "mensaje": "No existe empresa con id: 999"
+}
+```
+</ResponseExample>

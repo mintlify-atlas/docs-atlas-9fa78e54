@@ -1,80 +1,388 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: 'Quick Start Guide'
+description: 'Get InvestGo up and running on your local machine in minutes'
 ---
 
-## Get started in three steps
+## Prerequisites
 
-Get your documentation site running locally and make your first customization.
+Before you begin, ensure you have the following installed:
 
-### Step 1: Set up your local environment
+- **Java 1.8** or higher
+- **Maven 3.6+** for dependency management
+- **MySQL 8.0** or higher
+- **Git** for cloning the repository
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+## Setup Instructions
 
-### Step 2: Deploy your changes
+<Steps>
+  <Step title="Clone the Repository">
+    Clone the InvestGo source code to your local machine:
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+    ```bash
+    git clone <repository-url>
+    cd sistema-factoring-backend
+    ```
+  </Step>
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+  <Step title="Create MySQL Database">
+    Create the InvestGo database in MySQL:
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+    ```sql
+    CREATE DATABASE InvestGo;
+    ```
 
-### Step 3: Go live
+    <Info>
+      The application uses `spring.jpa.hibernate.ddl-auto=update`, so tables will be created automatically on first run.
+    </Info>
+  </Step>
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+  <Step title="Configure Database Connection">
+    Update `src/main/resources/application.properties` with your MySQL credentials:
 
-## Next steps
+    ```properties
+    # Server Configuration
+    server.port=8091
 
-Now that you have your docs running, explore these key features:
+    # Database Configuration
+    spring.jpa.database=MYSQL
+    spring.jpa.show-sql=true
+    spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+    spring.datasource.url=jdbc:mysql://localhost:3306/InvestGo
+    spring.datasource.username=root
+    spring.datasource.password=1234
 
-<CardGroup cols={2}>
+    # Hibernate Configuration
+    spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQL8Dialect
+    spring.jpa.hibernate.ddl-auto=update
+    spring.jpa.properties.hibernate.format_sql=true
+    ```
 
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
+    <Warning>
+      Replace `spring.datasource.username` and `spring.datasource.password` with your MySQL credentials.
+    </Warning>
+  </Step>
 
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
+  <Step title="Install Dependencies">
+    Use Maven to download all required dependencies:
 
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
+    ```bash
+    mvn clean install
+    ```
 
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
+    This will install:
+    - Spring Boot 2.7.5 (Web, JPA, Security, Validation)
+    - MySQL Connector
+    - JJWT 0.9.1 for JWT authentication
+    - BCrypt for password encryption
+  </Step>
 
-</CardGroup>
+  <Step title="Run the Application">
+    Start the Spring Boot application:
+
+    ```bash
+    mvn spring-boot:run
+    ```
+
+    Or run the compiled JAR:
+
+    ```bash
+    mvn package
+    java -jar target/sistema-factoring-backend-0.0.1-SNAPSHOT.jar
+    ```
+
+    The application will start on **port 8091**.
+  </Step>
+
+  <Step title="Verify Startup">
+    Check the console output for successful initialization:
+
+    ```
+    Roles registrado con exito!
+    USUARIO registrado con exito!
+    Tipos registrado con exito!
+    Se registro el banco: Banco continental BBVA
+    Se registro el banco: Banco de credito BCP
+    ...
+    Se registro la moneda: PEN
+    Se registro la moneda: USD
+    Se registro el riesgo: A
+    Se registro el riesgo: B
+    Se registro el riesgo: C
+    ```
+
+    <Info>
+      On first run, InvestGo automatically seeds the database with:
+      - Two roles: **INVERSIONISTA** and **ADMIN**
+      - Default admin user with credentials
+      - Transaction types: Deposito and Retiro
+      - Supported banks (BBVA, BCP, Scotiabank, Interbank, etc.)
+      - Currencies: PEN (S/.) and USD ($)
+      - Risk levels: A, B, C with descriptions
+    </Info>
+  </Step>
+</Steps>
+
+## Authentication
+
+InvestGo uses JWT-based authentication. To access protected endpoints, you must first obtain a token.
+
+### Default Admin Credentials
+
+The application creates a default admin user on first run:
+
+```json
+{
+  "username": "jamie",
+  "password": "Admin12345"
+}
+```
 
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+  The admin user has the following details:
+  - **Name:** Jeimy Apolaya Jurado
+  - **Email:** apolaya@gmail.com
+  - **Phone:** 938311721
+  - **DNI:** 77454558
+  - **Role:** ADMIN (idTipoUsu: 2)
+  - **Initial Wallet Balance:** 10,000,000
 </Note>
+
+### Get JWT Token
+
+Make a POST request to the authentication endpoint:
+
+```bash
+curl -X POST http://localhost:8091/generate-token \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "jamie",
+    "password": "Admin12345"
+  }'
+```
+
+**Response:**
+
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJqYW1pZSIsImV4cCI6MTcwOTU2NzgwMCwiaWF0IjoxNzA5NTMxODAwfQ..."
+}
+```
+
+<Warning>
+  JWT tokens expire after a certain period. If you receive a 401 Unauthorized error, generate a new token.
+</Warning>
+
+### Use Token in Requests
+
+Include the token in the `Authorization` header with the `Bearer` prefix:
+
+```bash
+curl -X GET http://localhost:8091/api/user/listarOportunidadInversion \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+## Making Your First API Call
+
+Let's retrieve the list of active investment opportunities.
+
+### List Investment Opportunities
+
+```bash
+curl -X GET http://localhost:8091/api/user/listarOportunidadInversion \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json"
+```
+
+**Response:**
+
+```json
+[
+  {
+    "idOportunidad": 1,
+    "rendimiento": 12.5,
+    "tir": 15.3,
+    "monto": 50000.0,
+    "montoRecaudado": 20000.0,
+    "fechaCaducidad": "2024-06-30",
+    "fechaRegistro": "2024-03-05",
+    "fechaPago": "2024-04-30",
+    "enable": "Activo",
+    "empresa": {
+      "idEmpresa": 1,
+      "nomEmpresa": "Tech Solutions SAC",
+      "ruc": "20123456789",
+      "sector": "Tecnología",
+      "riesgo": {
+        "rango": "A",
+        "descripcion": "El riesgo de inversion es nulo!"
+      }
+    }
+  }
+]
+```
+
+### Get Current User Details
+
+Retrieve the authenticated user's information:
+
+```bash
+curl -X GET http://localhost:8091/actual-usuario \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+**Response:**
+
+```json
+{
+  "id": 1,
+  "nombre": "Jeimy",
+  "apellidoPa": "Apolaya",
+  "apellidoMa": "Jurado",
+  "correo": "apolaya@gmail.com",
+  "username": "jamie",
+  "telefono": "938311721",
+  "dni": "77454558",
+  "enable": "Activo",
+  "idTipoUsu": 2,
+  "tiporol": {
+    "tipo": "ADMIN"
+  }
+}
+```
+
+## Key API Endpoints
+
+Here are the main endpoints you'll use:
+
+<CodeGroup>
+```bash Authentication
+# Generate JWT token
+POST /generate-token
+
+# Get current user
+GET /actual-usuario
+```
+
+```bash Investment Opportunities
+# List active opportunities (user)
+GET /api/user/listarOportunidadInversion
+
+# List with pagination
+GET /api/user/listarOportunidadInversion/page/{page}
+
+# Get opportunity details
+GET /api/detalleOportunidadInversion/{id}
+
+# Create opportunity (admin)
+POST /api/insertaOportunidadInversion
+
+# Update opportunity
+PUT /api/actualizarOportunidadInversion
+
+# Delete opportunity
+DELETE /api/eliminarOportunidadInversion/{id}
+```
+
+```bash Invoices
+# List invoices by opportunity
+GET /api/listarFacXIdOpo/{idOportunidad}
+
+# Add invoice to opportunity
+POST /api/addFactura
+
+# Remove invoice from opportunity
+DELETE /api/deleteFacturalist/{id}
+```
+</CodeGroup>
+
+## Application Architecture
+
+InvestGo follows a **layered architecture** pattern:
+
+```
+┌─────────────────┐
+│   Controllers   │  <- REST endpoints (@RestController)
+└────────┬────────┘
+         │
+┌────────▼────────┐
+│    Services     │  <- Business logic (@Service)
+└────────┬────────┘
+         │
+┌────────▼────────┐
+│  Repositories   │  <- Data access (@Repository)
+└────────┬────────┘
+         │
+┌────────▼────────┐
+│    Entities     │  <- JPA entities (@Entity)
+└────────┬────────┘
+         │
+┌────────▼────────┐
+│  MySQL Database │  <- InvestGo schema
+└─────────────────┘
+```
+
+## Common Issues
+
+<AccordionGroup>
+  <Accordion title="Database Connection Failed">
+    **Error:** `Communications link failure`
+
+    **Solution:**
+    - Verify MySQL is running: `sudo service mysql status`
+    - Check credentials in `application.properties`
+    - Ensure database `InvestGo` exists
+    - Verify port 3306 is accessible
+  </Accordion>
+
+  <Accordion title="Port 8091 Already in Use">
+    **Error:** `Port 8091 was already in use`
+
+    **Solution:**
+    - Change the port in `application.properties`: `server.port=8092`
+    - Or stop the process using port 8091:
+      ```bash
+      lsof -ti:8091 | xargs kill -9
+      ```
+  </Accordion>
+
+  <Accordion title="JWT Token Expired">
+    **Error:** `401 Unauthorized` or "El token ha expirado"
+
+    **Solution:**
+    - Generate a new token using `/generate-token` endpoint
+    - Tokens expire after a configured duration
+  </Accordion>
+
+  <Accordion title="Maven Build Fails">
+    **Error:** Dependency resolution errors
+
+    **Solution:**
+    ```bash
+    # Clear Maven cache and rebuild
+    mvn clean
+    rm -rf ~/.m2/repository
+    mvn install
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+Now that you have InvestGo running:
+
+<CardGroup cols={2}>
+  <Card title="Explore the Architecture" icon="diagram-project" href="/architecture">
+    Learn about entities, relationships, and design patterns
+  </Card>
+  <Card title="API Reference" icon="code" href="/api/auth">
+    Comprehensive endpoint documentation
+  </Card>
+</CardGroup>
+
+<Info>
+  **Development Tips:**
+  - Enable `spring.jpa.show-sql=true` to see generated SQL queries
+  - Use Spring DevTools for automatic restarts during development
+  - All dates use timezone `America/Lima` - ensure consistency
+  - CORS is configured to allow all origins (`*`) - restrict in production
+</Info>

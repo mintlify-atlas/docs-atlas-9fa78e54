@@ -1,0 +1,833 @@
+---
+title: "System Architecture"
+description: "Deep dive into InvestGo's architecture, design patterns, and entity relationships"
+---
+
+## Architectural Overview
+
+InvestGo is built using a **layered architecture** pattern with Spring Boot, ensuring separation of concerns and maintainability. The application follows Domain-Driven Design (DDD) principles with clearly defined layers.
+
+### Layered Architecture
+
+```
+┌──────────────────────────────────────────────────────────┐
+│                    Presentation Layer                     │
+│  ┌────────────────────────────────────────────────────┐  │
+│  │  REST Controllers (@RestController)                │  │
+│  │  - AuthenticationController                        │  │
+│  │  - OportunidadInversionController                  │  │
+│  │  - UsuarioController, EmpresaController, etc.      │  │
+│  └────────────────────────────────────────────────────┘  │
+└───────────────────────┬──────────────────────────────────┘
+                        │
+┌───────────────────────▼──────────────────────────────────┐
+│                    Security Layer                         │
+│  ┌────────────────────────────────────────────────────┐  │
+│  │  JWT Authentication Filter                         │  │
+│  │  Spring Security Configuration                     │  │
+│  │  BCrypt Password Encoder                           │  │
+│  └────────────────────────────────────────────────────┘  │
+└───────────────────────┬──────────────────────────────────┘
+                        │
+┌───────────────────────▼──────────────────────────────────┐
+│                    Business Layer                         │
+│  ┌────────────────────────────────────────────────────┐  │
+│  │  Service Interfaces & Implementations (@Service)   │  │
+│  │  - OportunidadInversionService                     │  │
+│  │  - UsuarioService, CarteraService, etc.            │  │
+│  │  Business logic, validation, calculations          │  │
+│  └────────────────────────────────────────────────────┘  │
+└───────────────────────┬──────────────────────────────────┘
+                        │
+┌───────────────────────▼──────────────────────────────────┐
+│                 Data Access Layer                         │
+│  ┌────────────────────────────────────────────────────┐  │
+│  │  Repositories (@Repository)                        │  │
+│  │  - Spring Data JPA Repositories                    │  │
+│  │  - Custom query methods                            │  │
+│  └────────────────────────────────────────────────────┘  │
+└───────────────────────┬──────────────────────────────────┘
+                        │
+┌───────────────────────▼──────────────────────────────────┐
+│                    Domain Layer                           │
+│  ┌────────────────────────────────────────────────────┐  │
+│  │  JPA Entities (@Entity)                            │  │
+│  │  - Usuario, Empresa, Factura                       │  │
+│  │  - OportunidadInversion, Cartera, etc.             │  │
+│  └────────────────────────────────────────────────────┘  │
+└───────────────────────┬──────────────────────────────────┘
+                        │
+┌───────────────────────▼──────────────────────────────────┐
+│                  Persistence Layer                        │
+│                    MySQL Database                         │
+│                   (InvestGo schema)                       │
+└──────────────────────────────────────────────────────────┘
+```
+
+## Package Structure
+
+The application follows Spring Boot conventions with organized packages:
+
+```
+com.proyecto.integrador/
+├── SistemaFactoringBackendApplication.java  # Main class with CommandLineRunner
+├── controladores/                            # REST Controllers
+│   ├── AuthenticationController.java
+│   ├── OportunidadInversionController.java
+│   ├── UsuarioController.java
+│   ├── EmpresaController.java
+│   ├── FacturaController.java
+│   ├── CarteraController.java
+│   ├── TransaccionController.java
+│   ├── CuentaBancariaController.java
+│   ├── BancoController.java
+│   └── MonedaController.java
+├── servicios/                                # Service layer
+│   ├── impl/                                 # Service implementations
+│   │   └── UserDetailsServiceImpl.java
+│   ├── OportunidadInversionService.java
+│   ├── UsuarioService.java
+│   ├── CarteraService.java
+│   ├── FacturaService.java
+│   └── ...
+├── repositorios/                             # JPA Repositories
+│   ├── OportunidadInversionRepository.java
+│   ├── UsuarioRepository.java
+│   └── ...
+├── entidades/                                # JPA Entities
+│   ├── Usuario.java
+│   ├── Empresa.java
+│   ├── Factura.java
+│   ├── OportunidadInversion.java
+│   ├── OportunidadFactura.java
+│   ├── OportunidadUsuario.java
+│   ├── Cartera.java
+│   ├── Transacciones.java
+│   ├── CuentaBancaria.java
+│   ├── Rol.java
+│   ├── Riesgo.java
+│   ├── Bancos.java
+│   ├── Monedas.java
+│   ├── TipoTransaccion.java
+│   └── Authority.java
+├── configuraciones/                          # Configuration classes
+│   ├── MySecurityConfig.java                # Spring Security config
+│   ├── JwtAuthenticationFilter.java         # JWT filter
+│   ├── JwtAuthenticationEntryPoint.java     # Auth entry point
+│   └── JwtUtils.java                        # JWT utilities
+├── dto/                                      # Data Transfer Objects
+│   ├── JwtRequest.java
+│   └── JwtResponse.java
+└── utils/                                    # Utilities
+    └── AppSettings.java                      # Application settings
+```
+
+## Core Domain Model
+
+### Entity Relationship Diagram
+
+InvestGo's domain model revolves around users, invoices, and investment opportunities:
+
+```
+                      ┌─────────────┐
+                      │     Rol     │
+                      ├─────────────┤
+                      │ id (PK)     │
+                      │ tipo        │
+                      └──────┬──────┘
+                             │
+                             │ 1
+                             │
+                             │ N
+       ┌─────────────────────▼──────────────────────┐
+       │                  Usuario                   │
+       ├────────────────────────────────────────────┤
+       │ id (PK)                                    │
+       │ nombre, apellidoPa, apellidoMa            │
+       │ username, password                         │
+       │ correo, telefono, dni                      │
+       │ foto, fecha, enable                        │
+       │ idTipoUsu (FK → Rol)                      │
+       └────┬─────────────────────────────────┬────┘
+            │ 1                               │ 1
+            │                                 │
+            │ 1                               │ N
+  ┌─────────▼──────────┐          ┌──────────▼─────────────┐
+  │      Cartera       │          │ OportunidadInversion   │
+  ├────────────────────┤          ├────────────────────────┤
+  │ idCartera (PK)     │          │ idOportunidad (PK)     │
+  │ saldo              │          │ rendimiento, tir       │
+  │ idUsu (FK)         │          │ monto, montoRecaudado  │
+  └────────────────────┘          │ fechaCaducidad         │
+                                  │ fechaRegistro          │
+                                  │ fechaPago, enable      │
+                                  │ idEmpresa (FK)         │
+                                  │ idUsu (FK)             │
+                                  └──────────┬─────────────┘
+                                             │ N
+                                             │
+                                             │ 1
+      ┌──────────────────────────────────────▼────────────┐
+      │                 Empresa                           │
+      ├───────────────────────────────────────────────────┤
+      │ idEmpresa (PK)                                    │
+      │ representanteLegal, nomEmpresa                    │
+      │ ruc, razonSocial                                  │
+      │ fechaDeInicioActv, direccion                      │
+      │ telefono, correo, sector                          │
+      │ fechRegistro, enable                              │
+      │ idRiesgo (FK → Riesgo)                           │
+      └───────┬───────────────────────────────────────────┘
+              │ 1                        │ 1
+              │                          │
+              │ N                        │ N
+   ┌──────────▼──────────┐     ┌─────────▼────────┐
+   │      Factura        │     │     Riesgo       │
+   ├─────────────────────┤     ├──────────────────┤
+   │ idFactura (PK)      │     │ idRiesgo (PK)    │
+   │ codFactura          │     │ rango (A/B/C)    │
+   │ monto               │     │ descripcion      │
+   │ fechaEmision        │     └──────────────────┘
+   │ fechaPago           │
+   │ enable, descripcion │
+   │ idEmpresa (FK)      │
+   └──────┬──────────────┘
+          │ N
+          │
+          │ N (through OportunidadFactura)
+          │
+   ┌──────▼─────────────────┐
+   │  OportunidadFactura    │
+   ├────────────────────────┤
+   │ idOpoFactura (PK)      │
+   │ idOportunidad (FK)     │
+   │ idFactura (FK)         │
+   └────────────────────────┘
+
+   ┌────────────────────────┐
+   │  OportunidadUsuario    │  (Investors in opportunities)
+   ├────────────────────────┤
+   │ idOpoUsu (PK)          │
+   │ idOportunidad (FK)     │
+   │ idUsuario (FK)         │
+   │ monto, fechaInversion  │
+   └────────────────────────┘
+
+   ┌────────────────────────┐          ┌──────────────────┐
+   │   CuentaBancaria       │─────N────│     Bancos       │
+   ├────────────────────────┤    1     ├──────────────────┤
+   │ idCuentaBancaria (PK)  │          │ idBancos (PK)    │
+   │ nroCuenta              │          │ nomBancos        │
+   │ idUsuario (FK)         │          └──────────────────┘
+   │ idBanco (FK)           │
+   │ idMoneda (FK)          │          ┌──────────────────┐
+   └────────┬───────────────┘          │     Monedas      │
+            │ 1                        ├──────────────────┤
+            │                          │ idMonedas (PK)   │
+            │ N                        │ nomMonedas       │
+   ┌────────▼───────────────┐          │ valorMoneda      │
+   │    Transacciones       │──────N───┤ (PEN/USD)        │
+   ├────────────────────────┤    1     └──────────────────┘
+   │ idTransaccion (PK)     │
+   │ monto, fecha           │          ┌──────────────────┐
+   │ idCuentaBancaria (FK)  │──────N───│ TipoTransaccion  │
+   │ idTipoTransaccion (FK) │    1     ├──────────────────┤
+   └────────────────────────┘          │ id (PK)          │
+                                       │ tipo             │
+                                       │ (Deposito/Retiro)│
+                                       └──────────────────┘
+```
+
+## Key Entity Details
+
+### Usuario (User)
+
+**Table:** `usuarios`
+
+**Implements:** `UserDetails` (Spring Security)
+
+```java
+@Entity
+@Table(name = "usuarios")
+public class Usuario implements UserDetails {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private long id;
+    
+    private String nombre;
+    private String apellidoPa;
+    private String apellidoMa;
+    private String telefono;
+    private String correo;
+    private String username;
+    private String password;  // BCrypt encrypted
+    private String foto;
+    
+    @Temporal(TemporalType.DATE)
+    @JsonFormat(pattern = "yyyy-MM-dd", timezone = "America/Lima")
+    private Date fecha;
+    
+    private String dni;
+    private String enable;  // "Activo" or "No Activo"
+    
+    @ManyToOne
+    @JoinColumn(name="idTipoUsu", insertable = false, updatable = false)
+    private Rol tiporol;
+    private long idTipoUsu;  // 1 = INVERSIONISTA, 2 = ADMIN
+}
+```
+
+**Key Features:**
+- Integrates with Spring Security through `UserDetails`
+- Password encrypted with BCrypt
+- One-to-one relationship with `Cartera` (wallet)
+- Many-to-one relationship with `Rol`
+
+### OportunidadInversion (Investment Opportunity)
+
+**Table:** `OportunidadInversion`
+
+```java
+@Entity
+@Table(name = "OportunidadInversion")
+public class OportunidadInversion {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private int idOportunidad;
+    
+    private double rendimiento;      // Yield percentage
+    private double tir;              // Internal Rate of Return
+    private Double monto;            // Total amount needed
+    private Double montoRecaudado;   // Amount raised so far
+    
+    @Temporal(TemporalType.DATE)
+    @JsonFormat(pattern = "yyyy-MM-dd", timezone = "America/Lima")
+    private Date fechaCaducidad;     // Maturity date
+    
+    @Temporal(TemporalType.DATE)
+    private Date fechaRegistro;      // Registration date
+    
+    @Temporal(TemporalType.DATE)
+    private Date fechaPago;          // Payment date (calculated)
+    
+    private String enable;           // "Activo" or "No Activo"
+    
+    @ManyToOne
+    @JoinColumn(name = "idEmpresa")
+    private Empresa empresa;
+    private int idEmpresa;
+    
+    @ManyToOne
+    @JoinColumn(name = "idUsu")
+    private Usuario usuario;         // Admin who created it
+    private long idUsu;
+}
+```
+
+**Business Logic:**
+- `fechaPago` is automatically calculated as `fechaCaducidad - 2 months`
+- `montoRecaudado` tracks investment progress
+- `enable` status determines visibility to investors
+
+### Factura (Invoice)
+
+**Table:** `factura`
+
+```java
+@Entity
+@Table(name = "factura")
+public class Factura {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private int idFactura;
+    
+    private String codFactura;
+    private double monto;
+    
+    @Temporal(TemporalType.DATE)
+    @JsonFormat(pattern = "yyyy-MM-dd", timezone = "America/Lima")
+    private Date fechaEmision;
+    
+    @Temporal(TemporalType.DATE)
+    private Date fechaPago;
+    
+    private String enable;          // "Activo" = available, "No Activo" = used
+    private String descripcion;
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name="idEmpresa")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    private Empresa empresa;
+}
+```
+
+**Key Features:**
+- Lazy loading for `Empresa` relationship
+- When added to `OportunidadInversion`, status changes to "No Activo"
+- Multiple invoices can be bundled into one opportunity via `OportunidadFactura`
+
+### Empresa (Company)
+
+**Table:** `empresas`
+
+```java
+@Entity
+@Table(name = "empresas")
+public class Empresa {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private int idEmpresa;
+    
+    private String representanteLegal;
+    private String nomEmpresa;
+    private String ruc;              // Tax ID
+    private String razonSocial;
+    
+    @Temporal(TemporalType.DATE)
+    private Date fechaDeInicioActv;
+    
+    private String direccion;
+    private String telefono;
+    private String correo;
+    private String sector;
+    
+    @Temporal(TemporalType.DATE)
+    private Date fechRegistro;
+    
+    private String enable;
+    
+    @ManyToOne
+    @JoinColumn(name="idRiesgo")
+    private Riesgo riesgo;
+    private int idRiesgo;
+}
+```
+
+### Cartera (Wallet)
+
+**Table:** `Carteras`
+
+```java
+@Entity
+@Table(name="Carteras")
+public class Cartera {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private int idCartera;
+    
+    private double saldo;            // Current balance
+    
+    @ManyToOne
+    @JoinColumn(name = "idUsu")
+    private Usuario usuario;
+    private long idUsu;
+}
+```
+
+**Business Logic:**
+- Created automatically when a user is registered
+- Default admin wallet starts with balance of 10,000,000
+- Updated during investments and transactions
+
+### Transacciones (Transactions)
+
+**Table:** `transacciones`
+
+```java
+@Entity
+@Table(name="transacciones")
+public class Transacciones {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private long idTransaccion;
+    
+    private double monto;
+    
+    @ManyToOne
+    @JoinColumn(name="idCuentaBancaria")
+    private CuentaBancaria cuentaBancaria;
+    private int idCuentaBancaria;
+    
+    @ManyToOne
+    @JoinColumn(name="idTipoTransaccion")
+    private TipoTransaccion tipoTransaccion;
+    private long idTipoTransaccion;  // 1 = Deposito, 2 = Retiro
+    
+    @Temporal(TemporalType.DATE)
+    @JsonFormat(pattern = "yyyy-MM-dd", timezone = "America/Lima")
+    private Date fecha;
+}
+```
+
+## Security Architecture
+
+### JWT Authentication Flow
+
+```
+┌────────┐                                    ┌────────────────┐
+│ Client │                                    │  API Server    │
+└───┬────┘                                    └───────┬────────┘
+    │                                                 │
+    │  1. POST /generate-token                       │
+    │     { username, password }                     │
+    │────────────────────────────────────────────────>│
+    │                                                 │
+    │                              2. Authenticate    │
+    │                                 (BCrypt verify) │
+    │                                                 │
+    │  3. Return JWT token                           │
+    │<────────────────────────────────────────────────│
+    │     { token: "eyJ..." }                        │
+    │                                                 │
+    │  4. GET /api/user/listarOportunidadInversion   │
+    │     Authorization: Bearer eyJ...               │
+    │────────────────────────────────────────────────>│
+    │                                                 │
+    │                        5. JwtAuthenticationFilter
+    │                           - Extract token       │
+    │                           - Validate signature  │
+    │                           - Load UserDetails    │
+    │                           - Set Authentication  │
+    │                                                 │
+    │  6. Return data                                │
+    │<────────────────────────────────────────────────│
+    │                                                 │
+```
+
+### Security Components
+
+#### MySecurityConfig
+
+**File:** `configuraciones/MySecurityConfig.java`
+
+```java
+@EnableWebSecurity
+@Configuration
+@EnableGlobalMethodSecurity(prePostEnabled = true)
+public class MySecurityConfig extends WebSecurityConfigurerAdapter {
+    
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
+        http
+            .csrf().disable()
+            .cors().disable()
+            .authorizeRequests()
+                .antMatchers("/generate-token", "/api/**").permitAll()
+                .antMatchers(HttpMethod.OPTIONS).permitAll()
+                .anyRequest().authenticated()
+            .and()
+                .exceptionHandling()
+                .authenticationEntryPoint(unauthorizedHandler)
+            .and()
+                .sessionManagement()
+                .sessionCreationPolicy(SessionCreationPolicy.STATELESS);
+        
+        http.addFilterBefore(jwtAuthenticationFilter, 
+                           UsernamePasswordAuthenticationFilter.class);
+    }
+}
+```
+
+**Key Configurations:**
+- CSRF disabled (stateless API)
+- `/generate-token` and `/api/**` are public
+- All other endpoints require authentication
+- Stateless session management (no session cookies)
+- JWT filter runs before Spring's authentication filter
+
+#### JwtAuthenticationFilter
+
+**File:** `configuraciones/JwtAuthenticationFilter.java`
+
+```java
+@Component
+public class JwtAuthenticationFilter extends OncePerRequestFilter {
+    
+    @Override
+    protected void doFilterInternal(HttpServletRequest request, 
+                                  HttpServletResponse response, 
+                                  FilterChain filterChain) {
+        String requestTokenHeader = request.getHeader("Authorization");
+        String username = null;
+        String jwtToken = null;
+        
+        // Extract token from "Bearer <token>" header
+        if(requestTokenHeader != null && 
+           requestTokenHeader.startsWith("Bearer ")) {
+            jwtToken = requestTokenHeader.substring(7);
+            username = this.jwtUtils.extractUsername(jwtToken);
+        }
+        
+        // Validate and set authentication
+        if(username != null && 
+           SecurityContextHolder.getContext().getAuthentication() == null) {
+            UserDetails userDetails = 
+                this.userDetailsService.loadUserByUsername(username);
+            
+            if(this.jwtUtils.validateToken(jwtToken, userDetails)) {
+                UsernamePasswordAuthenticationToken auth = 
+                    new UsernamePasswordAuthenticationToken(
+                        userDetails, null, userDetails.getAuthorities());
+                SecurityContextHolder.getContext().setAuthentication(auth);
+            }
+        }
+        
+        filterChain.doFilter(request, response);
+    }
+}
+```
+
+**Filter Responsibilities:**
+1. Extract JWT from `Authorization` header
+2. Parse and validate token
+3. Load user details from database
+4. Set authentication in Spring Security context
+
+## Design Patterns Used
+
+### 1. Layered Architecture
+- Clear separation: Controllers → Services → Repositories → Entities
+- Each layer has specific responsibilities
+- Promotes testability and maintainability
+
+### 2. Dependency Injection
+- Extensive use of `@Autowired` for loose coupling
+- Constructor injection in newer components
+- Spring manages bean lifecycle
+
+### 3. Repository Pattern
+- Spring Data JPA repositories abstract data access
+- Custom query methods defined in repository interfaces
+- Automatic CRUD operations
+
+### 4. Data Transfer Objects (DTO)
+- `JwtRequest` and `JwtResponse` for authentication
+- Separates API contracts from domain entities
+
+### 5. Filter Chain Pattern
+- `JwtAuthenticationFilter` in security filter chain
+- Processes requests before reaching controllers
+
+### 6. Command Pattern
+- `CommandLineRunner` in main application class
+- Initializes database with seed data on startup
+
+### 7. Factory Pattern
+- `BCryptPasswordEncoder` bean creation
+- `AuthenticationManager` bean configuration
+
+## Database Schema
+
+### Key Tables
+
+| Table | Primary Key | Foreign Keys | Description |
+|-------|-------------|--------------|-------------|
+| `usuarios` | `id` | `idTipoUsu` → `rol.id` | User accounts |
+| `rol` | `id` | - | User roles (Admin/Investor) |
+| `empresas` | `idEmpresa` | `idRiesgo` → `riesgo.idRiesgo` | Companies |
+| `factura` | `idFactura` | `idEmpresa` → `empresas.idEmpresa` | Invoices |
+| `OportunidadInversion` | `idOportunidad` | `idEmpresa`, `idUsu` | Investment opportunities |
+| `OportunidadFactura` | `idOpoFactura` | `idOportunidad`, `idFactura` | Invoice-opportunity junction |
+| `OportunidadUsuario` | `idOpoUsu` | `idOportunidad`, `idUsuario` | User investments |
+| `Carteras` | `idCartera` | `idUsu` → `usuarios.id` | User wallets |
+| `CuentaBancaria` | `idCuentaBancaria` | `idUsuario`, `idBanco`, `idMoneda` | Bank accounts |
+| `transacciones` | `idTransaccion` | `idCuentaBancaria`, `idTipoTransaccion` | Wallet transactions |
+| `riesgo` | `idRiesgo` | - | Risk levels (A/B/C) |
+| `Bancos` | `idBancos` | - | Supported banks |
+| `Monedas` | `idMonedas` | - | Currencies (PEN/USD) |
+| `TipoTransaccion` | `id` | - | Transaction types |
+
+### Seed Data
+
+On first startup, `CommandLineRunner` populates:
+
+**Roles:**
+- `INVERSIONISTA` (id: 1)
+- `ADMIN` (id: 2)
+
+**Default Admin User:**
+- Username: `jamie`
+- Password: `Admin12345` (BCrypt hashed)
+- Role: ADMIN
+- Wallet balance: 10,000,000
+
+**Transaction Types:**
+- `Deposito` (id: 1)
+- `Retiro` (id: 2)
+
+**Banks:**
+- Banco continental BBVA
+- Banco de credito BCP
+- Scotiabank
+- Interbank
+- Dinners Club
+- Banbif
+- American Express
+
+**Currencies:**
+- PEN (S/.)
+- USD ($)
+
+**Risk Levels:**
+- A: "El riesgo de inversion es nulo!"
+- B: "El riesgo de inversion es CASI nulo!"
+- C: "El riesgo de inversion algo elevado"
+
+## API Design Principles
+
+### RESTful Conventions
+
+- **GET** - Retrieve resources
+- **POST** - Create new resources
+- **PUT** - Update existing resources
+- **DELETE** - Soft delete (set `enable = "No Activo"`)
+
+### Response Structure
+
+**Success Response:**
+```json
+{
+  "mensaje": "La oportunidad de inversion se registro exitosamente!",
+  "OportunidadInversion": { ... }
+}
+```
+
+**Error Response:**
+```json
+{
+  "mensaje": "No existe oportunidad con Id: 123",
+  "error": "Database access error: ..."
+}
+```
+
+### HTTP Status Codes
+
+- `200 OK` - Successful operation
+- `400 BAD_REQUEST` - Invalid input or business rule violation
+- `401 UNAUTHORIZED` - Missing or invalid JWT token
+- `404 NOT_FOUND` - Resource not found
+- `409 CONFLICT` - Duplicate entry or state conflict
+- `500 INTERNAL_SERVER_ERROR` - Database or server error
+
+### Pagination
+
+Endpoints like `/api/user/listarOportunidadInversion/page/{page}` use Spring Data's `Pageable`:
+
+```java
+Pageable pageable = PageRequest.of(page, 8);
+return oportunidadInversionService.listarOportunidadInversionesActivasPage(
+    "No Activo", pageable);
+```
+
+Returns 8 items per page.
+
+## Transaction Workflow Example
+
+### Creating an Investment Opportunity
+
+1. **Admin adds invoices to temporary list:**
+   ```
+   POST /api/addFactura
+   { "idFactura": 1 }
+   ```
+
+2. **Admin creates opportunity:**
+   ```
+   POST /api/insertaOportunidadInversion
+   {
+     "rendimiento": 12.5,
+     "tir": 15.3,
+     "monto": 50000,
+     "fechaCaducidad": "2024-06-30",
+     "idEmpresa": 1
+   }
+   ```
+
+3. **System automatically:**
+   - Sets `montoRecaudado = 0.0`
+   - Sets `enable = "Activo"`
+   - Calculates `fechaPago = fechaCaducidad - 2 months`
+   - Creates `OportunidadFactura` entries for each invoice
+   - Sets invoices to `enable = "No Activo"`
+   - Clears temporary invoice list
+
+4. **Investors view opportunity:**
+   ```
+   GET /api/user/listarOportunidadInversion
+   ```
+
+5. **Investor makes investment** (separate workflow via `OportunidadUsuario`)
+
+## Performance Considerations
+
+### Lazy Loading
+
+```java
+@ManyToOne(fetch = FetchType.LAZY)
+@JoinColumn(name="idEmpresa")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+private Empresa empresa;
+```
+
+- Prevents N+1 query problems
+- `@JsonIgnoreProperties` avoids serialization errors
+
+### Query Optimization
+
+- Custom repository methods for filtered queries
+- Pagination for large datasets
+- `spring.jpa.show-sql=true` for query analysis
+
+### Database Indexing
+
+Recommended indexes (not in code, add manually):
+- `usuarios(username)` - Frequent lookups in authentication
+- `OportunidadInversion(enable)` - Filtering active opportunities
+- `factura(enable, idEmpresa)` - Finding available invoices
+
+## Configuration Management
+
+### Application Properties
+
+**Location:** `src/main/resources/application.properties`
+
+```properties
+# Server
+server.port=8091
+
+# Database
+spring.datasource.url=jdbc:mysql://localhost:3306/InvestGo
+spring.datasource.username=root
+spring.datasource.password=1234
+
+# JPA/Hibernate
+spring.jpa.hibernate.ddl-auto=update  # Creates/updates schema
+spring.jpa.show-sql=true              # Logs SQL queries
+spring.jpa.properties.hibernate.format_sql=true
+```
+
+### Environment-Specific Configuration
+
+For production, override properties:
+
+```bash
+java -jar app.jar \
+  --spring.datasource.url=jdbc:mysql://prod-db:3306/InvestGo \
+  --spring.datasource.password=${DB_PASSWORD} \
+  --spring.jpa.hibernate.ddl-auto=validate
+```
+
+<Warning>
+  **Never use `ddl-auto=update` in production!** Use `validate` or `none` and manage schema with migration tools like Flyway or Liquibase.
+</Warning>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="API Reference" icon="book" href="/api/auth">
+    Detailed endpoint documentation with examples
+  </Card>
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Set up your development environment
+  </Card>
+</CardGroup>

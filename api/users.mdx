@@ -1,0 +1,461 @@
+---
+title: 'Users'
+description: 'Manage user accounts and authentication'
+---
+
+## Get User by ID
+
+<Warning>
+Authentication required
+</Warning>
+
+```http
+GET /api/buscar/{id}
+```
+
+Retrieves a single user by their ID.
+
+<ParamField path="id" type="long" required>
+  The unique identifier of the user
+</ParamField>
+
+### Response
+
+<ResponseField name="id" type="long">
+  User's unique identifier
+</ResponseField>
+
+<ResponseField name="nombre" type="string">
+  User's first name
+</ResponseField>
+
+<ResponseField name="apellidoPa" type="string">
+  User's paternal last name
+</ResponseField>
+
+<ResponseField name="apellidoMa" type="string">
+  User's maternal last name
+</ResponseField>
+
+<ResponseField name="telefono" type="string">
+  User's phone number
+</ResponseField>
+
+<ResponseField name="correo" type="string">
+  User's email address
+</ResponseField>
+
+<ResponseField name="username" type="string">
+  User's username for authentication
+</ResponseField>
+
+<ResponseField name="foto" type="string">
+  User's profile photo filename
+</ResponseField>
+
+<ResponseField name="fecha" type="date">
+  User registration date (format: yyyy-MM-dd)
+</ResponseField>
+
+<ResponseField name="dni" type="string">
+  User's national identification number
+</ResponseField>
+
+<ResponseField name="enable" type="string">
+  User status ("Activo" or "No Activo")
+</ResponseField>
+
+<ResponseField name="idTipoUsu" type="long">
+  Role ID (1 = ADMIN, 2 = USER)
+</ResponseField>
+
+<ResponseField name="tiporol" type="object">
+  User's role information
+  <Expandable title="properties">
+    <ResponseField name="idTipoUsu" type="long">
+      Role ID
+    </ResponseField>
+    <ResponseField name="tipo" type="string">
+      Role type (ADMIN or USER)
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl -X GET "https://api.investgo.com/api/buscar/1" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200 - Success
+{
+  "id": 1,
+  "nombre": "Juan",
+  "apellidoPa": "Pérez",
+  "apellidoMa": "García",
+  "telefono": "987654321",
+  "correo": "juan.perez@email.com",
+  "username": "juanperez",
+  "foto": "default.png",
+  "fecha": "2024-01-15",
+  "dni": "12345678",
+  "enable": "Activo",
+  "idTipoUsu": 2,
+  "tiporol": {
+    "idTipoUsu": 2,
+    "tipo": "USER"
+  }
+}
+```
+
+```json 404 - Not Found
+{
+  "mensaje": "El usuario con codigo 999 no existe"
+}
+```
+</ResponseExample>
+
+---
+
+## Get User by Username
+
+```http
+GET /api/{username}
+```
+
+Retrieves a user by their username.
+
+<ParamField path="username" type="string" required>
+  The username to search for
+</ParamField>
+
+<RequestExample>
+```bash cURL
+curl -X GET "https://api.investgo.com/api/juanperez" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+</RequestExample>
+
+---
+
+## List Active Users
+
+```http
+GET /api/active/listaUsuario
+```
+
+Retrieves all active users (excludes "No Activo" users).
+
+<RequestExample>
+```bash cURL
+curl -X GET "https://api.investgo.com/api/active/listaUsuario" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200 - Success
+[
+  {
+    "id": 1,
+    "nombre": "Juan",
+    "apellidoPa": "Pérez",
+    "apellidoMa": "García",
+    "correo": "juan.perez@email.com",
+    "username": "juanperez",
+    "enable": "Activo",
+    "idTipoUsu": 2
+  }
+]
+```
+</ResponseExample>
+
+---
+
+## List All Users
+
+```http
+GET /api/listarusuarios
+```
+
+Retrieves all users in the system.
+
+<RequestExample>
+```bash cURL
+curl -X GET "https://api.investgo.com/api/listarusuarios" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+</RequestExample>
+
+---
+
+## List Roles
+
+```http
+GET /api/listarRoles
+```
+
+Retrieves all available user roles.
+
+<RequestExample>
+```bash cURL
+curl -X GET "https://api.investgo.com/api/listarRoles" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200 - Success
+[
+  {
+    "idTipoUsu": 1,
+    "tipo": "ADMIN"
+  },
+  {
+    "idTipoUsu": 2,
+    "tipo": "USER"
+  }
+]
+```
+</ResponseExample>
+
+---
+
+## Register User
+
+```http
+POST /api/registrar
+```
+
+Creates a new user account.
+
+<Note>
+- Username, email, and DNI must be unique
+- Password will be encrypted automatically
+- User photo defaults to "default.png"
+- A wallet (cartera) is automatically created with 0 balance
+- Cannot register with ADMIN role
+</Note>
+
+### Request Body
+
+<ParamField body="nombre" type="string" required>
+  User's first name
+</ParamField>
+
+<ParamField body="apellidoPa" type="string" required>
+  User's paternal last name
+</ParamField>
+
+<ParamField body="apellidoMa" type="string" required>
+  User's maternal last name
+</ParamField>
+
+<ParamField body="telefono" type="string" required>
+  User's phone number
+</ParamField>
+
+<ParamField body="correo" type="string" required>
+  User's email address
+</ParamField>
+
+<ParamField body="username" type="string" required>
+  Desired username
+</ParamField>
+
+<ParamField body="password" type="string" required>
+  User's password (will be encrypted)
+</ParamField>
+
+<ParamField body="dni" type="string" required>
+  User's national identification number
+</ParamField>
+
+<ParamField body="idTipoUsu" type="long" required>
+  Role ID (2 for USER)
+</ParamField>
+
+<RequestExample>
+```bash cURL
+curl -X POST "https://api.investgo.com/api/registrar" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "nombre": "Juan",
+    "apellidoPa": "Pérez",
+    "apellidoMa": "García",
+    "telefono": "987654321",
+    "correo": "juan.perez@email.com",
+    "username": "juanperez",
+    "password": "securePassword123",
+    "dni": "12345678",
+    "idTipoUsu": 2
+  }'
+```
+</RequestExample>
+
+<ResponseExample>
+```json 201 - Created
+{
+  "mensaje": "Has sido registrado exitosamente",
+  "empleado": {
+    "id": 5,
+    "nombre": "Juan",
+    "apellidoPa": "Pérez",
+    "apellidoMa": "García",
+    "telefono": "987654321",
+    "correo": "juan.perez@email.com",
+    "username": "juanperez",
+    "foto": "default.png",
+    "fecha": "2024-03-15",
+    "dni": "12345678",
+    "enable": "Activo",
+    "idTipoUsu": 2
+  },
+  "cartera": {
+    "idCartera": 5,
+    "saldo": 0,
+    "idUsu": 5
+  }
+}
+```
+
+```json 409 - Username Already Exists
+{
+  "mensaje": "Ese username ya existe"
+}
+```
+
+```json 409 - Email Already Exists
+{
+  "mensaje": "Ese email de usuario ya existe"
+}
+```
+
+```json 409 - DNI Already Exists
+{
+  "mensaje": "El DNI de usuario ya existe"
+}
+```
+</ResponseExample>
+
+---
+
+## Update User
+
+```http
+PUT /api/actualizar
+```
+
+Updates an existing user's information.
+
+<Warning>
+- Cannot update username, password, role (idTipoUsu), or registration date
+- Can only update: name, phone, email, and DNI
+- Email and DNI must remain unique
+</Warning>
+
+### Request Body
+
+<ParamField body="id" type="long" required>
+  User ID to update
+</ParamField>
+
+<ParamField body="nombre" type="string">
+  Updated first name
+</ParamField>
+
+<ParamField body="apellidoPa" type="string">
+  Updated paternal last name
+</ParamField>
+
+<ParamField body="apellidoMa" type="string">
+  Updated maternal last name
+</ParamField>
+
+<ParamField body="telefono" type="string">
+  Updated phone number
+</ParamField>
+
+<ParamField body="correo" type="string">
+  Updated email (must be unique)
+</ParamField>
+
+<ParamField body="dni" type="string">
+  Updated DNI (must be unique)
+</ParamField>
+
+<RequestExample>
+```bash cURL
+curl -X PUT "https://api.investgo.com/api/actualizar" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -d '{
+    "id": 5,
+    "nombre": "Juan Carlos",
+    "apellidoPa": "Pérez",
+    "apellidoMa": "García",
+    "telefono": "987654322",
+    "correo": "juancarlos.perez@email.com",
+    "dni": "12345678"
+  }'
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200 - Success
+{
+  "mensaje": "Usuario actualizado exitosamente"
+}
+```
+
+```json 404 - Not Found
+{
+  "mensaje": "No se puede actualizar, el usuario no existe"
+}
+```
+
+```json 400 - Email Already Exists
+"Ese email de usuario ya existe"
+```
+</ResponseExample>
+
+---
+
+## Delete User (Soft Delete)
+
+```http
+DELETE /api/eliminar/{id}
+```
+
+Soft deletes a user by setting their status to "No Activo".
+
+<Note>
+This is a soft delete - the user record is not removed from the database, only marked as inactive.
+</Note>
+
+<ParamField path="id" type="long" required>
+  The ID of the user to delete
+</ParamField>
+
+<RequestExample>
+```bash cURL
+curl -X DELETE "https://api.investgo.com/api/eliminar/5" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200 - Success
+{
+  "mensaje": "Se elimino exitosamente el usuario"
+}
+```
+
+```json 409 - User Already Deleted
+{
+  "mensaje": "Usuario eliminado exitosamente"
+}
+```
+</ResponseExample>

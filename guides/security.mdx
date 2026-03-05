@@ -1,0 +1,506 @@
+---
+title: 'Security Configuration'
+description: 'Comprehensive guide to Spring Security implementation in InvestGo'
+---
+
+## Overview
+
+InvestGo implements a robust security architecture using Spring Security with JWT-based authentication. The system provides role-based access control (RBAC), password encryption, and stateless session management.
+
+## Security Architecture
+
+The security configuration is implemented in `MySecurityConfig.java:23` and includes:
+
+- JWT-based stateless authentication
+- BCrypt password encryption
+- Role-based authorization (ADMIN & INVERSIONISTA)
+- CORS and CSRF configuration
+- Custom authentication entry point
+- Security filter chain
+
+## Spring Security Configuration
+
+### Core Components
+
+<CodeGroup>
+```java Security Configuration
+@EnableWebSecurity
+@Configuration
+@EnableGlobalMethodSecurity(prePostEnabled = true)
+public class MySecurityConfig extends WebSecurityConfigurerAdapter {
+    
+    @Autowired
+    private JwtAuthenticationEntryPoint unauthorizedHandler;
+    
+    @Autowired
+    private UserDetailsServiceImpl userDetailsServiceImpl;
+    
+    @Autowired
+    private JwtAuthenticationFilter jwtAuthenticationFilter;
+    
+    @Bean
+    public BCryptPasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+}
+```
+
+```java Filter Chain Configuration
+@Override
+protected void configure(HttpSecurity http) throws Exception {
+    http
+        .csrf().disable()
+        .cors().disable()
+        .authorizeRequests()
+            .antMatchers("/generate-token", "/api/**").permitAll()
+            .antMatchers(HttpMethod.OPTIONS).permitAll()
+            .anyRequest().authenticated()
+        .and()
+            .exceptionHandling()
+            .authenticationEntryPoint(unauthorizedHandler)
+        .and()
+            .sessionManagement()
+            .sessionCreationPolicy(SessionCreationPolicy.STATELESS);
+    
+    http.addFilterBefore(jwtAuthenticationFilter, 
+                         UsernamePasswordAuthenticationFilter.class);
+}
+```
+</CodeGroup>
+
+### Security Features
+
+| Feature | Configuration | Description |
+|---------|---------------|-------------|
+| Authentication | JWT-based | Stateless token authentication |
+| Password Hashing | BCrypt | Industry-standard password encryption |
+| Session Management | STATELESS | No server-side sessions |
+| CSRF Protection | Disabled | Not needed for stateless JWT |
+| CORS | Disabled (Controller-level) | Handled via `@CrossOrigin` annotations |
+| Method Security | Enabled | `@PreAuthorize` annotations supported |
+
+## Role-Based Access Control
+
+### User Roles
+
+InvestGo defines two primary roles:
+
+<Accordion title="ADMIN (Role ID: 2)">
+  **Capabilities**:
+  - Full system access
+  - User management
+  - Factoring configuration
+  - Risk level management
+  - Bank and currency management
+  - View all transactions and investments
+  
+  **Default Admin Account** (seeded on first run):
+  - Username: `jamie`
+  - Password: `Admin12345` (BCrypt encrypted)
+  - Email: `apolaya@gmail.com`
+  - Initial wallet balance: S/. 10,000,000
+</Accordion>
+
+<Accordion title="INVERSIONISTA (Role ID: 1)">
+  **Capabilities**:
+  - View available invoices
+  - Make investments
+  - Manage personal portfolio
+  - Wallet operations (deposit/withdrawal)
+  - View own transactions
+  - Profile management
+  
+  **Access Level**: Limited to own resources and public endpoints
+</Accordion>
+
+### Implementing Role-Based Access
+
+Use `@PreAuthorize` annotations to restrict endpoints by role:
+
+<CodeGroup>
+```java Admin Only
+@PreAuthorize("hasRole('ADMIN')")
+@GetMapping("/usuarios")
+public ResponseEntity<?> getAllUsers() {
+    // Only ADMIN can access
+    return ResponseEntity.ok(usuarioService.listarUsuarios());
+}
+```
+
+```java Investor Only
+@PreAuthorize("hasRole('INVERSIONISTA')")
+@PostMapping("/inversiones")
+public ResponseEntity<?> createInvestment(@RequestBody Inversion inversion) {
+    // Only INVERSIONISTA can access
+    return ResponseEntity.ok(inversionService.registrar(inversion));
+}
+```
+
+```java Multiple Roles
+@PreAuthorize("hasAnyRole('ADMIN', 'INVERSIONISTA')")
+@GetMapping("/facturas/{id}")
+public ResponseEntity<?> getFactura(@PathVariable Long id) {
+    // Both ADMIN and INVERSIONISTA can access
+    return ResponseEntity.ok(facturaService.buscarPorId(id));
+}
+```
+
+```java Custom Authorization
+@PreAuthorize("hasRole('INVERSIONISTA') and #userId == authentication.principal.id")
+@GetMapping("/usuarios/{userId}/inversiones")
+public ResponseEntity<?> getUserInvestments(@PathVariable Long userId) {
+    // INVERSIONISTA can only access their own investments
+    return ResponseEntity.ok(inversionService.buscarPorUsuario(userId));
+}
+```
+</CodeGroup>
+
+## Protected vs Public Endpoints
+
+### Public Endpoints (No Authentication Required)
+
+From `MySecurityConfig.java:59`:
+
+```java
+.antMatchers("/generate-token", "/api/**").permitAll()
+.antMatchers(HttpMethod.OPTIONS).permitAll()
+```
+
+**Accessible without JWT token**:
+
+| Endpoint Pattern | Description |
+|-----------------|-------------|
+| `POST /generate-token` | User authentication and token generation |
+| `/api/**` | All endpoints under `/api/` path |
+| `OPTIONS *` | All OPTIONS requests (for CORS preflight) |
+
+<Info>
+The `/api/**` pattern appears to be intended for public API endpoints or user registration. Verify actual implementation for specific use cases.
+</Info>
+
+### Protected Endpoints (Authentication Required)
+
+All other endpoints require valid JWT token:
+
+```java
+.anyRequest().authenticated()
+```
+
+**Examples of protected endpoints**:
+- `GET /actual-usuario` - Get current user information
+- `/facturas/**` - Invoice management
+- `/inversiones/**` - Investment operations
+- `/usuarios/**` - User management
+- `/transacciones/**` - Transaction history
+- `/cartera/**` - Wallet operations
+
+## Password Encryption
+
+### BCrypt Configuration
+
+InvestGo uses BCrypt for password hashing (`MySecurityConfig.java:41-43`):
+
+```java
+@Bean
+public BCryptPasswordEncoder passwordEncoder() {
+    return new BCryptPasswordEncoder();
+}
+```
+
+### Password Hashing in Practice
+
+From the initial admin user creation (`SistemaFactoringBackendApplication.java:74`):
+
+```java
+usuario.setPassword(bCryptPasswordEncoder.encode("Admin12345"));
+```
+
+**BCrypt Characteristics**:
+- Adaptive hashing function
+- Automatic salt generation
+- Configurable work factor (default: 10)
+- One-way encryption (cannot be decrypted)
+
+<Warning>
+  **Password Security Best Practices**:
+  - Never store plain-text passwords
+  - Always use `passwordEncoder.encode()` when saving passwords
+  - Validate password strength on registration
+  - Implement password complexity requirements
+  - Consider password rotation policies for admin accounts
+</Warning>
+
+### Example: User Registration with Password Encryption
+
+```java
+@PostMapping("/api/usuarios/register")
+public ResponseEntity<?> registerUser(@RequestBody Usuario usuario) {
+    // Hash password before saving
+    usuario.setPassword(passwordEncoder.encode(usuario.getPassword()));
+    
+    Usuario savedUser = usuarioService.insertaActualizaUsuario(usuario);
+    return ResponseEntity.ok(savedUser);
+}
+```
+
+## Security Filter Chain
+
+### Filter Execution Order
+
+<Steps>
+  <Step title="JwtAuthenticationFilter">
+    Executes before `UsernamePasswordAuthenticationFilter` to extract and validate JWT tokens.
+  </Step>
+  
+  <Step title="Token Extraction">
+    Reads `Authorization` header and extracts token (format: `Bearer <token>`).
+  </Step>
+  
+  <Step title="Token Validation">
+    Validates token signature, expiration, and extracts username.
+  </Step>
+  
+  <Step title="User Loading">
+    Loads UserDetails from database using extracted username.
+  </Step>
+  
+  <Step title="Authentication Set">
+    Creates and sets authentication in SecurityContext.
+  </Step>
+  
+  <Step title="Filter Chain Continues">
+    Request proceeds to controller if authenticated, or rejected by entry point.
+  </Step>
+</Steps>
+
+### Custom Authentication Entry Point
+
+When authentication fails, `JwtAuthenticationEntryPoint.java:19` handles the response:
+
+```java
+@Override
+public void commence(HttpServletRequest request, 
+                     HttpServletResponse response,
+                     AuthenticationException authException) 
+                     throws IOException, ServletException {
+    response.sendError(HttpServletResponse.SC_UNAUTHORIZED, 
+                      "USUARIO NO AUTORIZADO");
+}
+```
+
+**Behavior**:
+- Returns HTTP 401 (Unauthorized)
+- Response body: `"USUARIO NO AUTORIZADO"`
+- Triggered when no valid authentication is present
+
+## CORS Configuration
+
+### Controller-Level CORS
+
+While CORS is disabled in security config (`MySecurityConfig.java:56-57`), it's enabled at the controller level:
+
+```java
+@RestController
+@CrossOrigin("*")
+public class AuthenticationController {
+    // Allows all origins
+}
+```
+
+<Warning>
+  **Production Recommendation**: 
+  Replace `@CrossOrigin("*")` with specific allowed origins:
+  
+  ```java
+  @CrossOrigin(origins = "https://yourdomain.com")
+  ```
+  
+  Allowing all origins (`*`) is a security risk in production environments.
+</Warning>
+
+### Recommended CORS Configuration for Production
+
+```java
+@Override
+protected void configure(HttpSecurity http) throws Exception {
+    http
+        .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+        // ... rest of configuration
+}
+
+@Bean
+CorsConfigurationSource corsConfigurationSource() {
+    CorsConfiguration configuration = new CorsConfiguration();
+    configuration.setAllowedOrigins(Arrays.asList("https://yourdomain.com"));
+    configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE"));
+    configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type"));
+    configuration.setAllowCredentials(true);
+    
+    UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+    source.registerCorsConfiguration("/**", configuration);
+    return source;
+}
+```
+
+## Session Management
+
+### Stateless Sessions
+
+From `MySecurityConfig.java:65`:
+
+```java
+.sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+```
+
+**Implications**:
+- No HTTP sessions created or used
+- No cookies for session tracking
+- Each request must include JWT token
+- Horizontal scaling is easier (no session replication needed)
+- No server-side state for authentication
+
+<Info>
+  Stateless architecture makes InvestGo highly scalable. Each request is independently authenticated without server-side session storage.
+</Info>
+
+## Security Testing
+
+### Testing Authentication
+
+<CodeGroup>
+```bash Test Public Endpoint
+curl -X POST http://localhost:8091/generate-token \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "jamie",
+    "password": "Admin12345"
+  }'
+```
+
+```bash Test Protected Endpoint (No Token)
+curl -X GET http://localhost:8091/actual-usuario
+# Expected: 401 Unauthorized - "USUARIO NO AUTORIZADO"
+```
+
+```bash Test Protected Endpoint (With Token)
+curl -X GET http://localhost:8091/actual-usuario \
+  -H "Authorization: Bearer eyJhbGciOiJIUzUxMiJ9..."
+# Expected: 200 OK with user data
+```
+
+```bash Test Invalid Token
+curl -X GET http://localhost:8091/actual-usuario \
+  -H "Authorization: Bearer invalid-token"
+# Expected: 401 Unauthorized
+```
+</CodeGroup>
+
+### Testing Role-Based Access
+
+```bash
+# Login as ADMIN
+ADMIN_TOKEN=$(curl -s -X POST http://localhost:8091/generate-token \
+  -H "Content-Type: application/json" \
+  -d '{"username": "jamie", "password": "Admin12345"}' \
+  | jq -r '.token')
+
+# Access admin endpoint
+curl -X GET http://localhost:8091/usuarios \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+# Expected: 200 OK (if endpoint has @PreAuthorize("hasRole('ADMIN')"))
+
+# Login as INVERSIONISTA
+INVERSOR_TOKEN=$(curl -s -X POST http://localhost:8091/generate-token \
+  -H "Content-Type: application/json" \
+  -d '{"username": "investor1", "password": "password"}' \
+  | jq -r '.token')
+
+# Try to access admin endpoint
+curl -X GET http://localhost:8091/usuarios \
+  -H "Authorization: Bearer $INVERSOR_TOKEN"
+# Expected: 403 Forbidden (if role check is implemented)
+```
+
+## Common Security Issues
+
+<Accordion title="Token Not Recognized">
+  **Symptoms**: Always receiving 401 Unauthorized even with valid token
+  
+  **Possible Causes**:
+  - Missing "Bearer " prefix in Authorization header
+  - Token copied with extra whitespace or line breaks
+  - Token expired (check `exp` claim)
+  - Secret key mismatch between token generation and validation
+  
+  **Solution**: Verify header format is exactly `Authorization: Bearer <token>`
+</Accordion>
+
+<Accordion title="CORS Errors in Browser">
+  **Symptoms**: Browser console shows CORS policy errors
+  
+  **Possible Causes**:
+  - Controller missing `@CrossOrigin` annotation
+  - OPTIONS requests not properly configured
+  - Credentials mode mismatch
+  
+  **Solution**: Add `@CrossOrigin` to controllers or configure global CORS
+</Accordion>
+
+<Accordion title="Password Authentication Fails">
+  **Symptoms**: Login fails with "Credenciales ivalidas" for correct password
+  
+  **Possible Causes**:
+  - Password not BCrypt encoded in database
+  - BCrypt encoder not configured correctly
+  - Password encoding done multiple times
+  
+  **Solution**: Ensure password is encoded exactly once before saving
+</Accordion>
+
+<Accordion title="Access Denied for Authorized User">
+  **Symptoms**: 403 Forbidden despite having valid token
+  
+  **Possible Causes**:
+  - User role doesn't match `@PreAuthorize` requirement
+  - Role name format mismatch (e.g., "ADMIN" vs "ROLE_ADMIN")
+  - User account disabled
+  
+  **Solution**: Check user's `idTipoUsu` field matches required role ID
+</Accordion>
+
+## Security Best Practices
+
+<Warning>
+  **Critical Security Considerations**:
+  
+  1. **Change Default Secret Key**: The current JWT secret (`examportal`) should be changed to a strong, unique value in production
+  
+  2. **Use Environment Variables**: Never hardcode secrets in source code
+     ```java
+     @Value("${jwt.secret}")
+     private String SECRET_KEY;
+     ```
+  
+  3. **Enable HTTPS**: Always use TLS/SSL in production to prevent token interception
+  
+  4. **Implement Rate Limiting**: Protect `/generate-token` endpoint from brute force attacks
+  
+  5. **Validate Input**: Sanitize all user input to prevent injection attacks
+  
+  6. **Audit Logging**: Log authentication attempts and security events
+  
+  7. **Regular Security Updates**: Keep Spring Security and dependencies updated
+</Warning>
+
+## Related Configuration Files
+
+- **Main Security Config**: `src/main/java/com/proyecto/integrador/configuraciones/MySecurityConfig.java`
+- **JWT Filter**: `src/main/java/com/proyecto/integrador/configuraciones/JwtAuthenticationFilter.java`
+- **Entry Point**: `src/main/java/com/proyecto/integrador/configuraciones/JwtAuthenticationEntryPoint.java`
+- **User Details Service**: `src/main/java/com/proyecto/integrador/servicios/impl/UserDetailsServiceImpl.java`
+
+## Next Steps
+
+- Configure [JWT Authentication](/guides/authentication)
+- Set up [Database Connection](/guides/database-setup)
+- Explore [API Endpoints](/api/auth)

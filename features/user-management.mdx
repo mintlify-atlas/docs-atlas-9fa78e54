@@ -1,0 +1,652 @@
+---
+title: "User Management"
+description: "Manage user accounts, roles, and authentication with JWT security"
+---
+
+## Overview
+
+The User Management feature provides comprehensive user account administration with role-based access control (RBAC). The system supports two primary roles: **ADMIN** (administrators) and **Inversionista** (investors), with JWT-based authentication ensuring secure API access.
+
+## Key Capabilities
+
+<CardGroup cols={2}>
+  <Card title="User Registration" icon="user-plus">
+    Self-service registration with automatic wallet creation and password encryption
+  </Card>
+  <Card title="Role-Based Access" icon="shield-halved">
+    Granular control with ADMIN and Inversionista roles for feature segregation
+  </Card>
+  <Card title="JWT Authentication" icon="key">
+    Secure token-based authentication for stateless API access
+  </Card>
+  <Card title="Account Management" icon="user-gear">
+    Enable/disable users without data deletion for audit trail preservation
+  </Card>
+</CardGroup>
+
+## Data Model
+
+The `Usuario` entity implements Spring Security's `UserDetails` interface:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | long | Unique identifier (auto-generated) |
+| `nombre` | String | First name |
+| `apellidoPa` | String | Paternal surname |
+| `apellidoMa` | String | Maternal surname |
+| `telefono` | String | Phone number |
+| `correo` | String | Email address (unique) |
+| `username` | String | Login username (unique) |
+| `password` | String | Encrypted password (BCrypt) |
+| `dni` | String | National ID number (unique) |
+| `foto` | String | Profile photo filename (default: "default.png") |
+| `fecha` | Date | Registration date |
+| `enable` | String | Account status: "Activo" or "No Activo" |
+| `idTipoUsu` | long | Role ID (foreign key to Rol) |
+| `tiporol` | Rol | Role entity (ADMIN or Inversionista) |
+
+### Role Entity
+
+The `Rol` entity defines user roles:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `idTipoUsu` | Long | Role ID (1 = ADMIN, 2 = Inversionista) |
+| `tipo` | String | Role name ("ADMIN" or "Inversionista") |
+
+<Note>
+  Passwords are automatically encrypted using BCrypt before storage. Users attempting to register as ADMIN are automatically downgraded to `idTipoUsu = 1` (basic user role).
+</Note>
+
+## Workflow
+
+### User Registration Process
+
+The registration workflow includes automatic validations and wallet creation:
+
+1. **Validate Uniqueness**
+   - Check if `username` already exists
+   - Check if `correo` (email) already exists
+   - Check if `dni` (national ID) already exists
+   - Return conflict error if any duplicates found
+
+2. **Set Automatic Fields**
+   - `fecha` = current date
+   - `enable` = "Activo"
+   - `foto` = "default.png"
+   - `id` = 0 (triggers auto-generation)
+
+3. **Encrypt Password**
+   - Apply BCrypt hashing to plaintext password
+
+4. **Assign Role**
+   - Retrieve role entity by `idTipoUsu`
+   - Prevent ADMIN role assignment (security measure)
+   - Associate role with user
+
+5. **Create User**
+   - Persist user to database
+
+6. **Create Wallet**
+   - Automatically create a `Cartera` (wallet) for the user
+   - Initialize with `saldo` = 0
+   - Link to user via `idUsu`
+
+<Accordion title="See Code Example: User Registration">
+```java
+// From UsuarioController.java:94-151
+@PostMapping("/registrar")
+public ResponseEntity<?> registrar(@RequestBody @Valid Usuario usuario) throws Exception {
+    // Validate uniqueness
+    int existeUsername = usuarioService.ExisteporUsuario(usuario.getUsername(), usuario.getId());
+    if (existeUsername != 0) {
+        return new ResponseEntity<>("Ese username ya existe", HttpStatus.CONFLICT);
+    }
+    
+    int existeCorreo = usuarioService.ExisteporCorreo(usuario.getCorreo(), usuario.getId());
+    if (existeCorreo != 0) {
+        return new ResponseEntity<>("Ese email de usuario ya existe", HttpStatus.CONFLICT);
+    }
+    
+    int existeDni = usuarioService.ExisteporDni(usuario.getDni(), usuario.getId());
+    if (existeDni != 0) {
+        return new ResponseEntity<>("El DNI de usuario ya existe", HttpStatus.CONFLICT);
+    }
+    
+    // Set automatic fields
+    usuario.setFecha(new Date());
+    usuario.setEnable("Activo");
+    usuario.setFoto("default.png");
+    usuario.setId(0);
+    usuario.setPassword(bCryptPasswordEncoder.encode(usuario.getPassword()));
+    
+    // Prevent ADMIN role assignment
+    Rol rol = rolService.buscarporId(usuario.getIdTipoUsu());
+    if (rol.getTipo().equals("ADMIN")) {
+        usuario.setIdTipoUsu(1L); // Downgrade to basic user
+    }
+    usuario.setTiporol(rol);
+    
+    // Create user and wallet
+    Usuario objUsuario = usuarioService.insertaActualizaUsuario(usuario);
+    Cartera cartera = new Cartera();
+    cartera.setSaldo(0);
+    cartera.setIdUsu(objUsuario.getId());
+    Cartera objCartera = carteraService.insertaActualizaCartera(cartera);
+    
+    return new ResponseEntity<>(objUsuario, HttpStatus.CREATED);
+}
+```
+
+See full implementation at `UsuarioController.java:94-151`
+</Accordion>
+
+## Main API Endpoints
+
+### User CRUD Operations
+
+<Tabs>
+  <Tab title="Register User">
+    ```http
+    POST /api/registrar
+    ```
+    Creates a new user account with automatic wallet creation.
+    
+    **Request Body:**
+    ```json
+    {
+      "nombre": "Juan",
+      "apellidoPa": "Pérez",
+      "apellidoMa": "García",
+      "telefono": "987654321",
+      "correo": "juan.perez@example.com",
+      "username": "jperez",
+      "password": "SecurePass123!",
+      "dni": "12345678",
+      "idTipoUsu": 2
+    }
+    ```
+    
+    **Success Response (201 CREATED):**
+    ```json
+    {
+      "mensaje": "Has sido registrado exitosamente",
+      "empleado": {
+        "id": 15,
+        "nombre": "Juan",
+        "apellidoPa": "Pérez",
+        "username": "jperez",
+        "correo": "juan.perez@example.com",
+        "fecha": "2026-03-05",
+        "enable": "Activo",
+        "foto": "default.png",
+        "tiporol": {
+          "idTipoUsu": 2,
+          "tipo": "Inversionista"
+        }
+      },
+      "cartera": {
+        "idCartera": 15,
+        "saldo": 0.0,
+        "idUsu": 15
+      }
+    }
+    ```
+    
+    <Warning>
+      Password is stored encrypted. The plaintext password is never saved or returned.
+    </Warning>
+  </Tab>
+  
+  <Tab title="Update User">
+    ```http
+    PUT /api/actualizar
+    ```
+    Updates user profile information. Certain fields are protected from modification.
+    
+    **Request Body:**
+    ```json
+    {
+      "id": 15,
+      "nombre": "Juan Carlos",
+      "apellidoPa": "Pérez",
+      "apellidoMa": "García",
+      "telefono": "987654322",
+      "correo": "juancarlos.perez@example.com",
+      "dni": "12345678"
+    }
+    ```
+    
+    **Protected Fields (Cannot Update):**
+    - `username` - Preserved from existing user
+    - `password` - Preserved from existing user
+    - `idTipoUsu` - Role cannot be changed
+    - `fecha` - Registration date preserved
+    - `enable` - Status managed separately
+    - `foto` - Profile photo managed separately
+    
+    See implementation at `UsuarioController.java:154-203`
+  </Tab>
+  
+  <Tab title="Delete User">
+    ```http
+    DELETE /api/eliminar/{id}
+    ```
+    Soft deletes user by setting `enable` to "No Activo".
+    
+    **Path Parameters:**
+    - `id` - User ID
+    
+    **Success Response:**
+    ```json
+    {
+      "mensaje": "Se elimino exitosamente el usuario"
+    }
+    ```
+    
+    <Note>
+      User data is preserved for audit trails. Account is disabled but not deleted from database.
+    </Note>
+    
+    See implementation at `UsuarioController.java:205-226`
+  </Tab>
+  
+  <Tab title="Get User by ID">
+    ```http
+    GET /api/buscar/{id}
+    ```
+    Retrieves complete user information by ID.
+    
+    **Path Parameters:**
+    - `id` - User ID
+    
+    **Response:**
+    ```json
+    {
+      "id": 15,
+      "nombre": "Juan",
+      "apellidoPa": "Pérez",
+      "username": "jperez",
+      "correo": "juan.perez@example.com",
+      "enable": "Activo",
+      "tiporol": {
+        "idTipoUsu": 2,
+        "tipo": "Inversionista"
+      }
+    }
+    ```
+    
+    See implementation at `UsuarioController.java:51-66`
+  </Tab>
+</Tabs>
+
+### List Endpoints
+
+<Tabs>
+  <Tab title="List All Users">
+    ```http
+    GET /api/listarusuarios
+    ```
+    Returns all users in the system (active and inactive).
+    
+    See implementation at `UsuarioController.java:86-91`
+  </Tab>
+  
+  <Tab title="List Active Users">
+    ```http
+    GET /api/active/listaUsuario
+    ```
+    Returns only users with `enable` = "Activo".
+    
+    **Response:**
+    ```json
+    [
+      {
+        "id": 15,
+        "nombre": "Juan",
+        "username": "jperez",
+        "enable": "Activo",
+        "tiporol": {
+          "tipo": "Inversionista"
+        }
+      }
+    ]
+    ```
+    
+    See implementation at `UsuarioController.java:69-74`
+  </Tab>
+  
+  <Tab title="Get User by Username">
+    ```http
+    GET /api/{username}
+    ```
+    Retrieves user by their username (used internally by authentication).
+    
+    **Path Parameters:**
+    - `username` - The user's username
+    
+    See implementation at `UsuarioController.java:228-232`
+  </Tab>
+</Tabs>
+
+### Role Management
+
+<Accordion title="List Available Roles">
+```http
+GET /api/listarRoles
+```
+
+Returns all available user roles in the system.
+
+**Response:**
+```json
+[
+  {
+    "idTipoUsu": 1,
+    "tipo": "ADMIN"
+  },
+  {
+    "idTipoUsu": 2,
+    "tipo": "Inversionista"
+  }
+]
+```
+
+Useful for populating role selection dropdowns in registration forms.
+
+See implementation at `UsuarioController.java:77-82`
+</Accordion>
+
+## Authentication Flow
+
+### JWT Token Generation
+
+The authentication system uses JWT (JSON Web Tokens) for stateless authentication:
+
+<Steps>
+  <Step title="User Login Request">
+    User submits credentials to the authentication endpoint:
+    
+    ```http
+    POST /generate-token
+    ```
+    
+    **Request Body:**
+    ```json
+    {
+      "username": "jperez",
+      "password": "SecurePass123!"
+    }
+    ```
+  </Step>
+  
+  <Step title="Credential Verification">
+    System authenticates using Spring Security's `AuthenticationManager`:
+    
+    - Retrieves user by username
+    - Compares BCrypt-encrypted password
+    - Verifies account is enabled
+    - Checks for disabled or bad credentials exceptions
+  </Step>
+  
+  <Step title="Token Generation">
+    Upon successful authentication:
+    
+    - Load full `UserDetails` for the user
+    - Generate JWT token with user information and authorities
+    - Token includes role information (ADMIN or Inversionista)
+  </Step>
+  
+  <Step title="Token Response">
+    Return JWT token to client:
+    
+    ```json
+    {
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+    }
+    ```
+    
+    Client stores this token and includes it in subsequent API requests via the `Authorization` header.
+  </Step>
+</Steps>
+
+<Accordion title="See Code Example: Authentication Flow">
+```java
+// From AuthenticationController.java:36-60
+@PostMapping("/generate-token")
+public ResponseEntity<?> generarToken(@RequestBody JwtRequest jwtRequest) throws Exception {
+    try {
+        autenticar(jwtRequest.getUsername(), jwtRequest.getPassword());
+    } catch (Exception exception) {
+        throw new Exception("Usuario no encontrado");
+    }
+    
+    UserDetails userDetails = this.userDetailsService.loadUserByUsername(jwtRequest.getUsername());
+    String token = this.jwtUtils.generateToken(userDetails);
+    return ResponseEntity.ok(new JwtResponse(token));
+}
+
+private void autenticar(String username, String password) throws Exception {
+    try {
+        authenticationManager.authenticate(
+            new UsernamePasswordAuthenticationToken(username, password)
+        );
+    } catch (DisabledException e) {
+        throw new Exception("Usuario deshabilitado" + e.getMessage());
+    } catch (BadCredentialsException e) {
+        throw new Exception("Credenciales ivalidas" + e.getMessage());
+    }
+}
+```
+
+See full implementation at `AuthenticationController.java:36-60`
+</Accordion>
+
+### Get Current User
+
+```http
+GET /actual-usuario
+```
+
+Retrieves the currently authenticated user based on the JWT token in the request.
+
+**Headers:**
+```
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+**Response:**
+```json
+{
+  "id": 15,
+  "nombre": "Juan",
+  "username": "jperez",
+  "tiporol": {
+    "tipo": "Inversionista"
+  }
+}
+```
+
+See implementation at `AuthenticationController.java:61-65`
+
+## Role-Based Access Control
+
+### ADMIN Role Capabilities
+
+Users with the ADMIN role have access to:
+
+- **Investment Opportunity Management**
+  - Create, update, delete opportunities
+  - Bundle invoices into opportunities
+  - View all opportunities (active and inactive)
+
+- **Invoice Management**
+  - Register new invoices
+  - Update invoice details
+  - Delete invoices
+  - Search and filter invoices
+
+- **User Administration**
+  - View all users
+  - Enable/disable user accounts
+  - View user details
+
+- **Financial Overview**
+  - View all wallets and balances
+  - Monitor all transactions
+
+### Inversionista Role Capabilities
+
+Users with the Inversionista role have access to:
+
+- **Investment Opportunities (Read-Only)**
+  - View active opportunities
+  - See opportunity details (returns, funding progress)
+  - Browse and filter available investments
+
+- **Personal Wallet**
+  - View their own wallet balance
+  - Make deposits from bank accounts
+  - Make withdrawals to bank accounts
+  - View personal transaction history
+
+- **Profile Management**
+  - Update their own profile information
+  - View their account details
+
+<Note>
+  Endpoint URLs often indicate access level: `/api/admin/*` for admin-only, `/api/user/*` for investors, and `/api/*` for public/authenticated endpoints.
+</Note>
+
+## Default Admin User
+
+The system should be initialized with a default admin user for initial access:
+
+```sql
+INSERT INTO usuarios (nombre, apellidoPa, apellidoMa, telefono, correo, username, password, dni, foto, fecha, enable, idTipoUsu)
+VALUES (
+  'Admin',
+  'System',
+  'User',
+  '999999999',
+  'admin@investgo.com',
+  'admin',
+  '$2a$10$...', -- BCrypt hash of default password
+  '00000000',
+  'default.png',
+  CURRENT_DATE,
+  'Activo',
+  1
+);
+```
+
+<Warning>
+  **IMPORTANT**: Change the default admin password immediately after first login in production environments.
+</Warning>
+
+## Use Cases
+
+### Use Case 1: Investor Registration
+
+**Scenario:** A new investor wants to create an account to start investing.
+
+1. User fills out registration form with:
+   - Personal information (name, phone, email)
+   - Username and password
+   - DNI (national ID)
+   - Selects role: Inversionista (idTipoUsu = 2)
+
+2. Frontend calls `POST /api/registrar`
+
+3. System:
+   - Validates username, email, and DNI are unique
+   - Encrypts password with BCrypt
+   - Creates user account with "Activo" status
+   - Automatically creates wallet with 0 balance
+   - Returns user details and wallet information
+
+4. User can immediately log in with their credentials
+
+### Use Case 2: User Login and Token Generation
+
+**Scenario:** Registered user wants to access the platform.
+
+1. User enters username "jperez" and password "SecurePass123!"
+2. Frontend calls `POST /generate-token`
+3. System:
+   - Authenticates credentials against BCrypt hash
+   - Verifies account is enabled ("Activo")
+   - Loads user's role (Inversionista)
+   - Generates JWT token with user info and authorities
+4. System returns token
+5. Frontend stores token and includes it in all subsequent requests:
+   ```
+   Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+   ```
+
+### Use Case 3: Admin Disabling a User Account
+
+**Scenario:** A user violated terms of service and needs to be suspended.
+
+1. Admin identifies user ID: 15
+2. Admin calls `DELETE /api/eliminar/15`
+3. System:
+   - Sets user's `enable` field to "No Activo"
+   - Preserves all user data for audit trail
+4. User can no longer authenticate (disabled exception thrown)
+5. User's data and transaction history remain in database
+
+### Use Case 4: User Updating Profile Information
+
+**Scenario:** User changed their email and phone number.
+
+1. User (id: 15) retrieves current info: `GET /api/buscar/15`
+2. User modifies:
+   - `correo`: "newemail@example.com"
+   - `telefono`: "987654999"
+3. User calls `PUT /api/actualizar` with updated data
+4. System:
+   - Validates new email is unique
+   - Verifies user exists
+   - Preserves protected fields (username, password, role, fecha)
+   - Updates modifiable fields
+5. System returns success confirmation
+
+## Security Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Password Encryption" icon="lock">
+    All passwords are encrypted with BCrypt. Never store or transmit plaintext passwords.
+  </Card>
+  
+  <Card title="Token Validation" icon="shield-check">
+    Validate JWT tokens on every request using JwtAuthenticationFilter. Check expiration and signature.
+  </Card>
+  
+  <Card title="Role Restrictions" icon="user-shield">
+    Prevent role escalation by blocking ADMIN role assignment during registration (line 125-128 of UsuarioController).
+  </Card>
+  
+  <Card title="Soft Deletion" icon="trash-can-arrow-up">
+    Never hard-delete users. Use enable/disable for audit trail preservation.
+  </Card>
+</CardGroup>
+
+## Error Handling
+
+Common error scenarios:
+
+| Scenario | HTTP Status | Response |
+|----------|-------------|----------|
+| Username already exists | 409 CONFLICT | `{"mensaje": "Ese username ya existe"}` |
+| Email already exists | 409 CONFLICT | `{"mensaje": "Ese email de usuario ya existe"}` |
+| DNI already exists | 409 CONFLICT | `{"mensaje": "El DNI de usuario ya existe"}` |
+| User not found | 404 NOT_FOUND | `{"mensaje": "El usuario con codigo X no existe"}` |
+| Invalid credentials | 500 ERROR | `{"mensaje": "Credenciales ivalidas"}` |
+| Disabled account | 500 ERROR | `{"mensaje": "Usuario deshabilitado"}` |
+
+## Related Features
+
+- [Wallet Transactions](/features/wallet-transactions) - Automatically created wallets for each user
+- [Investment Opportunities](/features/investment-opportunities) - Role-based access to opportunity management
+- [Invoice Management](/features/invoice-management) - Admin-only invoice operations

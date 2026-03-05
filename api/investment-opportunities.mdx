@@ -1,0 +1,562 @@
+---
+title: 'Investment Opportunities'
+description: 'Manage investment opportunities backed by invoices'
+---
+
+## List Active Investment Opportunities (User)
+
+```http
+GET /api/user/listarOportunidadInversion
+```
+
+Retrieves all active investment opportunities for users.
+
+<Warning>
+User authentication required
+</Warning>
+
+<RequestExample>
+```bash cURL
+curl -X GET "https://api.investgo.com/api/user/listarOportunidadInversion" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200 - Success
+[
+  {
+    "idOportunidad": 1,
+    "rendimiento": 12.5,
+    "tir": 14.2,
+    "monto": 50000.00,
+    "montoRecaudado": 25000.00,
+    "fechaCaducidad": "2024-06-15",
+    "fechaRegistro": "2024-01-15",
+    "fechaPago": "2024-04-15",
+    "enable": "Activo",
+    "idEmpresa": 1,
+    "idUsu": 2
+  }
+]
+```
+</ResponseExample>
+
+---
+
+## List Active Investment Opportunities (Admin)
+
+```http
+GET /api/admin/listarOportunidadInversion
+```
+
+Retrieves all active investment opportunities for admins.
+
+<Warning>
+Admin authentication required
+</Warning>
+
+<RequestExample>
+```bash cURL
+curl -X GET "https://api.investgo.com/api/admin/listarOportunidadInversion" \
+  -H "Authorization: Bearer ADMIN_TOKEN"
+```
+</RequestExample>
+
+---
+
+## List Investment Opportunities (Paginated)
+
+```http
+GET /api/user/listarOportunidadInversion/page/{page}
+```
+
+Retrieves active investment opportunities with pagination (8 per page).
+
+<ParamField path="page" type="integer" required>
+  Page number (0-indexed)
+</ParamField>
+
+<RequestExample>
+```bash cURL
+curl -X GET "https://api.investgo.com/api/user/listarOportunidadInversion/page/0" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200 - Success
+{
+  "content": [
+    {
+      "idOportunidad": 1,
+      "rendimiento": 12.5,
+      "tir": 14.2,
+      "monto": 50000.00,
+      "montoRecaudado": 25000.00,
+      "fechaCaducidad": "2024-06-15",
+      "enable": "Activo"
+    }
+  ],
+  "totalPages": 4,
+  "totalElements": 30,
+  "pageNumber": 0,
+  "pageSize": 8
+}
+```
+</ResponseExample>
+
+---
+
+## Get Investment Opportunity by ID
+
+```http
+GET /api/user/buscarOportunidades/{idOportunidadIn}
+```
+
+Retrieves a specific investment opportunity by ID.
+
+<ParamField path="idOportunidadIn" type="integer" required>
+  Investment opportunity ID
+</ParamField>
+
+<RequestExample>
+```bash cURL
+curl -X GET "https://api.investgo.com/api/user/buscarOportunidades/1" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200 - Success
+{
+  "idOportunidad": 1,
+  "rendimiento": 12.5,
+  "tir": 14.2,
+  "monto": 50000.00,
+  "montoRecaudado": 25000.00,
+  "fechaCaducidad": "2024-06-15",
+  "fechaRegistro": "2024-01-15",
+  "fechaPago": "2024-04-15",
+  "enable": "Activo",
+  "empresa": {
+    "idEmpresa": 1,
+    "nomEmpresa": "Tech Solutions SAC",
+    "ruc": "20123456789"
+  },
+  "idEmpresa": 1,
+  "idUsu": 2
+}
+```
+
+```json 404 - Not Found
+{
+  "mensaje": "No se encontro la Oportunidad con el ID 999 en el Sistema"
+}
+```
+</ResponseExample>
+
+---
+
+## Get Investment Opportunity Details
+
+```http
+GET /api/detalleOportunidadInversion/{id}
+```
+
+Retrieves detailed information about an investment opportunity.
+
+<ParamField path="id" type="integer" required>
+  Investment opportunity ID
+</ParamField>
+
+<RequestExample>
+```bash cURL
+curl -X GET "https://api.investgo.com/api/detalleOportunidadInversion/1" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+</RequestExample>
+
+---
+
+## List All Investment Opportunities
+
+```http
+GET /api/listarOportunidadInversion
+```
+
+Retrieves all investment opportunities (active and inactive).
+
+<RequestExample>
+```bash cURL
+curl -X GET "https://api.investgo.com/api/listarOportunidadInversion" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+</RequestExample>
+
+---
+
+## List Invoices by Investment Opportunity
+
+```http
+GET /api/listarFacXIdOpo/{idOportunidad}
+```
+
+Retrieves all invoices associated with an investment opportunity.
+
+<ParamField path="idOportunidad" type="integer" required>
+  Investment opportunity ID
+</ParamField>
+
+<RequestExample>
+```bash cURL
+curl -X GET "https://api.investgo.com/api/listarFacXIdOpo/1" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200 - Success
+[
+  {
+    "idOportunidadFactura": 1,
+    "idOportunidad": 1,
+    "idFactura": 1
+  },
+  {
+    "idOportunidadFactura": 2,
+    "idOportunidad": 1,
+    "idFactura": 2
+  }
+]
+```
+</ResponseExample>
+
+---
+
+## Add Invoice to Temporary List
+
+```http
+POST /api/addFactura
+```
+
+Adds an invoice to a temporary list for creating an investment opportunity.
+
+<Note>
+This is a session-based temporary list. Use before creating an investment opportunity.
+</Note>
+
+### Request Body
+
+<ParamField body="idFactura" type="integer" required>
+  Invoice ID to add
+</ParamField>
+
+<RequestExample>
+```bash cURL
+curl -X POST "https://api.investgo.com/api/addFactura" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -d '{
+    "idFactura": 1
+  }'
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200 - Success
+{
+  "Facturas": [
+    {
+      "idFactura": 1,
+      "codFactura": "F-001",
+      "monto": 15000.00
+    }
+  ]
+}
+```
+
+```json 409 - Already Added
+{
+  "mensaje": "Ups, parece que ya Ingreso esa factura",
+  "Factura": {
+    "idFactura": 1
+  }
+}
+```
+
+```json 400 - Invoice Not Found
+{
+  "mensaje": "No existe Factura con id: 999"
+}
+```
+</ResponseExample>
+
+---
+
+## Remove Invoice from Temporary List
+
+```http
+DELETE /api/deleteFacturalist/{id}
+```
+
+Removes an invoice from the temporary list.
+
+<ParamField path="id" type="integer" required>
+  Invoice ID to remove
+</ParamField>
+
+<RequestExample>
+```bash cURL
+curl -X DELETE "https://api.investgo.com/api/deleteFacturalist/1" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200 - Success
+{
+  "Facturas": []
+}
+```
+
+```json 409 - List Empty
+{
+  "mensaje": "La lista esta vacia!"
+}
+```
+</ResponseExample>
+
+---
+
+## Clear Temporary Invoice List
+
+```http
+GET /api/refrescarListaFactura
+```
+
+Clears the temporary invoice list.
+
+<RequestExample>
+```bash cURL
+curl -X GET "https://api.investgo.com/api/refrescarListaFactura" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200 - Success
+{
+  "Limpio lista Factura": []
+}
+```
+</ResponseExample>
+
+---
+
+## Create Investment Opportunity
+
+```http
+POST /api/insertaOportunidadInversion
+```
+
+Creates a new investment opportunity with invoices from the temporary list.
+
+<Warning>
+Requires authenticated session. At least one invoice must be added to temporary list before creating.
+</Warning>
+
+<Note>
+- Uses invoices from the temporary session list
+- Status is automatically set to "Activo"
+- Registration date is set to current date
+- montoRecaudado is initialized to 0
+- fechaPago is calculated as fechaCaducidad minus 2 months
+- Associated invoices are automatically set to "No Activo" after creation
+- Temporary list is cleared after successful creation
+</Note>
+
+### Request Body
+
+<ParamField body="rendimiento" type="double" required>
+  Expected return rate (percentage)
+</ParamField>
+
+<ParamField body="tir" type="double" required>
+  Internal rate of return (TIR)
+</ParamField>
+
+<ParamField body="monto" type="double" required>
+  Total investment amount
+</ParamField>
+
+<ParamField body="fechaCaducidad" type="date" required>
+  Expiration date (format: yyyy-MM-dd)
+</ParamField>
+
+<ParamField body="idEmpresa" type="integer" required>
+  Company ID
+</ParamField>
+
+<RequestExample>
+```bash cURL
+curl -X POST "https://api.investgo.com/api/insertaOportunidadInversion" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -d '{
+    "rendimiento": 12.5,
+    "tir": 14.2,
+    "monto": 50000.00,
+    "fechaCaducidad": "2024-06-15",
+    "idEmpresa": 1
+  }'
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200 - Success
+{
+  "mensaje": "La oportunidad de inversion se registro exitosamente!",
+  "OportunidadInversion": {
+    "idOportunidad": 1,
+    "rendimiento": 12.5,
+    "tir": 14.2,
+    "monto": 50000.00,
+    "montoRecaudado": 0,
+    "fechaCaducidad": "2024-06-15",
+    "fechaRegistro": "2024-03-15",
+    "fechaPago": "2024-04-15",
+    "enable": "Activo",
+    "idEmpresa": 1,
+    "idUsu": 2
+  }
+}
+```
+
+```json 409 - No Invoices
+{
+  "mensaje": "Debe agregar facturas para poder registrar la Oportunidad de Inversion!",
+  "ListaFacturas": []
+}
+```
+</ResponseExample>
+
+---
+
+## Update Investment Opportunity
+
+```http
+PUT /api/actualizarOportunidadInversion
+```
+
+Updates an existing investment opportunity.
+
+<Warning>
+- Cannot change: enable status, fechaRegistro, montoRecaudado
+- fechaPago is automatically recalculated based on fechaCaducidad
+</Warning>
+
+### Request Body
+
+<ParamField body="idOportunidad" type="integer" required>
+  Investment opportunity ID
+</ParamField>
+
+<ParamField body="rendimiento" type="double">
+  Updated return rate
+</ParamField>
+
+<ParamField body="tir" type="double">
+  Updated TIR
+</ParamField>
+
+<ParamField body="monto" type="double">
+  Updated investment amount
+</ParamField>
+
+<ParamField body="fechaCaducidad" type="date">
+  Updated expiration date
+</ParamField>
+
+<ParamField body="idEmpresa" type="integer">
+  Updated company ID
+</ParamField>
+
+<RequestExample>
+```bash cURL
+curl -X PUT "https://api.investgo.com/api/actualizarOportunidadInversion" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -d '{
+    "idOportunidad": 1,
+    "rendimiento": 13.0,
+    "tir": 15.0,
+    "monto": 55000.00,
+    "fechaCaducidad": "2024-07-15",
+    "idEmpresa": 1
+  }'
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200 - Success
+{
+  "mensaje": "La oportunidad de inversion se actualizo exitosamente!",
+  "OportunidadInversion": {
+    "idOportunidad": 1,
+    "rendimiento": 13.0,
+    "tir": 15.0,
+    "monto": 55000.00
+  }
+}
+```
+
+```json 400 - Not Found
+{
+  "mensaje": "No existe oportunidad con Id: 999"
+}
+```
+</ResponseExample>
+
+---
+
+## Delete Investment Opportunity (Soft Delete)
+
+```http
+DELETE /api/eliminarOportunidadInversion/{id}
+```
+
+Soft deletes an investment opportunity by setting status to "No Activo".
+
+<Note>
+This is a soft delete - the opportunity is marked as inactive but not removed from the database.
+</Note>
+
+<ParamField path="id" type="integer" required>
+  Investment opportunity ID to delete
+</ParamField>
+
+<RequestExample>
+```bash cURL
+curl -X DELETE "https://api.investgo.com/api/eliminarOportunidadInversion/1" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200 - Success
+{
+  "mensaje": "La oportunidad de inversion se elimino exitosamente!",
+  "OportunidadInversion": {
+    "idOportunidad": 1,
+    "enable": "No Activo"
+  }
+}
+```
+
+```json 400 - Not Found
+{
+  "mensaje": "No existe oportunidad con Id: 999"
+}
+```
+</ResponseExample>

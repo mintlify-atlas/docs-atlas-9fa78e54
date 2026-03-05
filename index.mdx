@@ -1,97 +1,309 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+mode: "custom"
 ---
 
-## Setting up
+{/* Hero Section */}
+<div className="relative py-20 overflow-hidden bg-gradient-to-br from-[#1E88E5] via-[#1976D2] to-[#1565C0]">
+  <div className="absolute inset-0 bg-black/20"></div>
+  <div className="relative max-w-6xl mx-auto px-6 lg:px-8">
+    <div className="grid lg:grid-cols-12 gap-12 items-center">
+      <div className="lg:col-span-7">
+        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-6">
+          InvestGo Factoring Platform
+        </h1>
+        <p className="text-lg sm:text-xl text-white/90 mb-8 max-w-2xl">
+          A comprehensive invoice factoring and investment platform built with Spring Boot. Empower your users to invest in invoices, manage portfolios, and access growth capital through our secure, scalable API.
+        </p>
+        <div className="flex flex-wrap gap-4">
+          <a 
+            href="/quickstart" 
+            className="inline-flex items-center px-6 py-3 bg-white text-[#1E88E5] font-semibold rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            Get Started
+          </a>
+          <a 
+            href="/api/auth" 
+            className="inline-flex items-center px-6 py-3 border border-white/30 bg-white/10 text-white font-semibold rounded-lg hover:bg-white/20 transition-colors"
+          >
+            View API Reference
+          </a>
+        </div>
+      </div>
+      <div className="lg:col-span-5 hidden lg:block">
+        <div className="relative">
+          <div className="bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20 p-6">
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="w-3 h-3 rounded-full bg-green-400"></div>
+                <div className="text-white/90 text-sm font-mono">System Online</div>
+              </div>
+              <div className="bg-black/30 rounded-lg p-4">
+                <code className="text-green-400 text-sm">
+                  POST /generate-token
+                  <br />
+                  GET /api/listarOportunidadInversion
+                  <br />
+                  POST /api/registrarFactura
+                </code>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
-Get your documentation site up and running in minutes.
+{/* Quick Start Section */}
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <div className="mb-12">
+    <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">Quick Start</h2>
+    <p className="text-lg text-gray-600 dark:text-gray-400">Get your invoice factoring platform up and running in minutes</p>
+  </div>
 
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
+  <Steps>
+    <Step title="Set Up Your Database">
+      Configure MySQL and update `application.properties` with your database credentials.
 
-## Make it yours
+      ```properties application.properties
+      spring.datasource.url=jdbc:mysql://localhost:3306/InvestGo
+      spring.datasource.username=your_username
+      spring.datasource.password=your_password
+      spring.jpa.hibernate.ddl-auto=update
+      ```
 
-Design a docs site that looks great and empowers your users.
+      The application will automatically create the required tables and seed initial data (roles, banks, currencies, risk levels) on first run.
+    </Step>
 
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
-  </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
-  </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
-  </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
-  </Card>
-</Columns>
+    <Step title="Start the Spring Boot Application">
+      Build and run the application using Maven:
 
-## Create beautiful pages
+      <CodeGroup>
+        ```bash Maven Wrapper
+        ./mvnw spring-boot:run
+        ```
 
-Everything you need to create world-class documentation.
+        ```bash Maven
+        mvn spring-boot:run
+        ```
+      </CodeGroup>
 
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
+      The server will start on port **8091** by default.
+    </Step>
 
-## Need inspiration?
+    <Step title="Authenticate and Get Your Token">
+      Generate a JWT token by authenticating with the default admin account:
 
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+      ```bash cURL
+      curl -X POST http://localhost:8091/generate-token \
+        -H "Content-Type: application/json" \
+        -d '{
+          "username": "jamie",
+          "password": "Admin12345"
+        }'
+      ```
+
+      <Accordion title="Example Response">
+        ```json
+        {
+          "token": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJqYW1pZSIsImV4cCI6MTY4..."
+        }
+        ```
+      </Accordion>
+
+      Use this token in the `Authorization` header for all subsequent requests: `Bearer <token>`
+    </Step>
+
+    <Step title="Make Your First API Call">
+      List available investment opportunities:
+
+      ```bash cURL
+      curl -X GET http://localhost:8091/api/user/listarOportunidadInversion \
+        -H "Authorization: Bearer <your_token>"
+      ```
+
+      You're now ready to explore the full API! Check out the [API Reference](/api/auth) for complete endpoint documentation.
+    </Step>
+  </Steps>
+</div>
+
+{/* Core Features Section */}
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <div className="mb-12">
+    <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">Core Features</h2>
+    <p className="text-lg text-gray-600 dark:text-gray-400">Everything you need to build a modern invoice factoring platform</p>
+  </div>
+
+  <CardGroup cols={2}>
+    <Card 
+      title="Investment Opportunities" 
+      icon="chart-line" 
+      href="/features/investment-opportunities"
+    >
+      Create and manage investment opportunities that bundle multiple invoices, track funding progress, and calculate returns.
+    </Card>
+    <Card 
+      title="Invoice Management" 
+      icon="file-invoice" 
+      href="/features/invoice-management"
+    >
+      Register invoices with automatic code generation, status tracking, and company association.
+    </Card>
+    <Card 
+      title="User & Role Management" 
+      icon="users" 
+      href="/features/user-management"
+    >
+      Secure user authentication with JWT tokens and role-based access control for admins and investors.
+    </Card>
+    <Card 
+      title="Digital Wallets" 
+      icon="wallet" 
+      href="/features/wallet-transactions"
+    >
+      Manage user portfolios with deposit and withdrawal transactions, balance tracking, and transaction history.
+    </Card>
+  </CardGroup>
+</div>
+
+{/* Explore by Topic Section */}
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <div className="mb-12">
+    <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">Explore by Topic</h2>
+    <p className="text-lg text-gray-600 dark:text-gray-400">Deep dive into specific areas of the platform</p>
+  </div>
+
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <a 
+      href="/guides/authentication" 
+      className="group block rounded-2xl border border-gray-200 dark:border-[#27272a] hover:border-[#1E88E5] dark:hover:border-[#1E88E5] overflow-hidden no-underline transition-colors"
+    >
+      <div className="h-40 bg-gradient-to-br from-[#1E88E5]/10 to-[#1565C0]/10 dark:from-[#1E88E5]/20 dark:to-[#1565C0]/20 flex items-center justify-center">
+        <div className="text-6xl">🔐</div>
+      </div>
+      <div className="p-6 bg-white dark:bg-[#1a1d27]">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">JWT Authentication</h3>
+        <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+          Learn how to implement secure authentication with JWT tokens, role-based authorization, and Spring Security.
+        </p>
+        <div className="flex items-center gap-2 text-[#1E88E5] dark:text-[#64B5F6] text-sm font-medium group-hover:text-[#1565C0] dark:group-hover:text-[#1E88E5] transition-colors">
+          Read the guide
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </div>
+      </div>
+    </a>
+
+    <a 
+      href="/architecture" 
+      className="group block rounded-2xl border border-gray-200 dark:border-[#27272a] hover:border-[#1E88E5] dark:hover:border-[#1E88E5] overflow-hidden no-underline transition-colors"
+    >
+      <div className="h-40 bg-gradient-to-br from-[#1E88E5]/10 to-[#1565C0]/10 dark:from-[#1E88E5]/20 dark:to-[#1565C0]/20 flex items-center justify-center">
+        <div className="text-6xl">🏗️</div>
+      </div>
+      <div className="p-6 bg-white dark:bg-[#1a1d27]">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">System Architecture</h3>
+        <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+          Understand the layered architecture, entity relationships, and design patterns used throughout the platform.
+        </p>
+        <div className="flex items-center gap-2 text-[#1E88E5] dark:text-[#64B5F6] text-sm font-medium group-hover:text-[#1565C0] dark:group-hover:text-[#1E88E5] transition-colors">
+          View architecture
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </div>
+      </div>
+    </a>
+  </div>
+</div>
+
+{/* API Resources Section */}
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <div className="mb-12">
+    <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">API Resources</h2>
+    <p className="text-lg text-gray-600 dark:text-gray-400">Complete REST API documentation for all platform resources</p>
+  </div>
+
+  <CardGroup cols={3}>
+    <Card title="Users" icon="user" href="/api/users">
+      User registration, profile management, and authentication
+    </Card>
+    <Card title="Invoices" icon="file-invoice-dollar" href="/api/invoices">
+      Invoice creation, retrieval, and status management
+    </Card>
+    <Card title="Companies" icon="building" href="/api/companies">
+      Company profiles and invoice issuer management
+    </Card>
+    <Card title="Investment Opportunities" icon="hand-holding-dollar" href="/api/investment-opportunities">
+      Create and manage investment opportunities
+    </Card>
+    <Card title="Transactions" icon="money-bill-transfer" href="/api/transactions">
+      Wallet deposits, withdrawals, and transaction history
+    </Card>
+    <Card title="Wallets" icon="wallet" href="/api/wallets">
+      User wallet balance and portfolio management
+    </Card>
+  </CardGroup>
+</div>
+
+{/* Key Capabilities Section */}
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <div className="rounded-2xl bg-gradient-to-br from-gray-50 to-gray-100 dark:from-[#1a1d27] dark:to-[#242838] border border-gray-200 dark:border-[#27272a] p-8">
+    <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Platform Capabilities</h2>
+    <div className="grid md:grid-cols-2 gap-6">
+      <div className="flex gap-4">
+        <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-[#1E88E5]/10 dark:bg-[#1E88E5]/20 flex items-center justify-center">
+          <span className="text-[#1E88E5]">✓</span>
+        </div>
+        <div>
+          <h3 className="font-semibold text-gray-900 dark:text-white mb-1">Role-Based Access Control</h3>
+          <p className="text-sm text-gray-600 dark:text-gray-400">Admin and Investor roles with granular permissions</p>
+        </div>
+      </div>
+      <div className="flex gap-4">
+        <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-[#1E88E5]/10 dark:bg-[#1E88E5]/20 flex items-center justify-center">
+          <span className="text-[#1E88E5]">✓</span>
+        </div>
+        <div>
+          <h3 className="font-semibold text-gray-900 dark:text-white mb-1">Multi-Currency Support</h3>
+          <p className="text-sm text-gray-600 dark:text-gray-400">Handle transactions in PEN and USD</p>
+        </div>
+      </div>
+      <div className="flex gap-4">
+        <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-[#1E88E5]/10 dark:bg-[#1E88E5]/20 flex items-center justify-center">
+          <span className="text-[#1E88E5]">✓</span>
+        </div>
+        <div>
+          <h3 className="font-semibold text-gray-900 dark:text-white mb-1">Risk Assessment</h3>
+          <p className="text-sm text-gray-600 dark:text-gray-400">Built-in risk classification system (A, B, C levels)</p>
+        </div>
+      </div>
+      <div className="flex gap-4">
+        <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-[#1E88E5]/10 dark:bg-[#1E88E5]/20 flex items-center justify-center">
+          <span className="text-[#1E88E5]">✓</span>
+        </div>
+        <div>
+          <h3 className="font-semibold text-gray-900 dark:text-white mb-1">Pagination Support</h3>
+          <p className="text-sm text-gray-600 dark:text-gray-400">Efficient data retrieval for large datasets</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{/* Closing CTA Section */}
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <div className="rounded-2xl bg-gradient-to-br from-[#1E88E5] to-[#1565C0] p-8 lg:p-12 text-center">
+    <h2 className="text-3xl font-bold text-white mb-4">Ready to Get Started?</h2>
+    <p className="text-lg text-white/90 mb-8 max-w-2xl mx-auto">
+      Follow our quickstart guide to set up your development environment and make your first API call in under 10 minutes.
+    </p>
+    <a 
+      href="/quickstart" 
+      className="inline-flex items-center px-8 py-4 bg-white text-[#1E88E5] font-semibold rounded-lg hover:bg-gray-50 transition-colors"
+    >
+      Start Building Now
+    </a>
+  </div>
+</div>

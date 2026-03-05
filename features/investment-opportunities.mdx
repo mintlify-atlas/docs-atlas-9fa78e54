@@ -1,0 +1,375 @@
+---
+title: "Investment Opportunities"
+description: "Create and manage investment opportunities by bundling invoices for investors"
+---
+
+## Overview
+
+The Investment Opportunities feature allows administrators to create investment products by bundling multiple invoices into attractive investment packages. Each opportunity represents a collection of invoices that investors can fund, with defined returns (rendimiento) and internal rate of return (TIR) calculations.
+
+## Key Capabilities
+
+<CardGroup cols={2}>
+  <Card title="Bundle Invoices" icon="box">
+    Combine multiple invoices into a single investment opportunity with automated tracking
+  </Card>
+  <Card title="Track Funding" icon="chart-line">
+    Monitor funding progress with real-time monto recaudado (collected amount) updates
+  </Card>
+  <Card title="Lifecycle Management" icon="rotate">
+    Manage opportunity status from creation through activation to completion
+  </Card>
+  <Card title="Risk Assessment" icon="shield">
+    Calculate and display TIR and rendimiento for investor decision-making
+  </Card>
+</CardGroup>
+
+## Data Model
+
+The `OportunidadInversion` entity contains the following key fields:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `idOportunidad` | int | Unique identifier (auto-generated) |
+| `rendimiento` | double | Expected return percentage |
+| `tir` | double | Internal Rate of Return (Tasa Interna de Retorno) |
+| `monto` | Double | Target investment amount |
+| `montoRecaudado` | Double | Amount collected so far |
+| `fechaCaducidad` | Date | Opportunity expiration date |
+| `fechaRegistro` | Date | Creation date |
+| `fechaPago` | Date | Calculated payout date (2 months before fechaCaducidad) |
+| `enable` | String | Status: "Activo" or "No Activo" |
+| `idEmpresa` | int | Associated company ID |
+| `idUsu` | long | Creator user ID |
+
+<Note>
+  The `fechaPago` is automatically calculated as 2 months before the `fechaCaducidad` to ensure timely payment processing.
+</Note>
+
+## Workflow
+
+### Creating an Investment Opportunity
+
+The creation process follows these steps:
+
+1. **Add Invoices to Temporary List**
+   - Admin selects active invoices
+   - Invoices are validated and added to a session-scoped list
+   - Duplicate prevention ensures each invoice appears only once
+
+2. **Submit Opportunity Details**
+   - Define rendimiento and TIR
+   - Set target monto and fechaCaducidad
+   - Associate with a company
+
+3. **Automatic Processing**
+   - System sets `montoRecaudado` to 0.0
+   - Status automatically set to "Activo"
+   - `fechaPago` calculated (fechaCaducidad - 2 months)
+   - Each invoice linked via `OportunidadFactura` junction table
+   - Linked invoices marked as "No Activo" (no longer available for other opportunities)
+
+<Accordion title="See Code Example: Creating an Opportunity">
+```java
+// From OportunidadInversionController.java:183-247
+@PostMapping("/insertaOportunidadInversion")
+public ResponseEntity<?> insertaOportunidadInversion(@RequestBody OportunidadInversion obj, HttpSession session) {
+    if (facturaList.isEmpty()) {
+        return new ResponseEntity<>("Must add invoices first", HttpStatus.CONFLICT);
+    }
+    
+    // Set automatic fields
+    obj.setIdidUsu((long) session.getAttribute("idUsuActual"));
+    obj.setEnable("Activo");
+    obj.setFechaRegistro(new Date());
+    obj.setMontoRecaudado(0.0);
+    
+    // Calculate payment date (2 months before expiration)
+    Calendar calendar = Calendar.getInstance();
+    calendar.setTime(obj.getFechaCaducidad());
+    calendar.add(Calendar.MONTH, -2);
+    obj.setFechaPago(calendar.getTime());
+    
+    // Save opportunity
+    OportunidadInversion objsalida = oportunidadInversionservice.insertaActualizaOportunidadInversion(obj);
+    
+    // Link invoices and disable them
+    for (Factura f : facturaList) {
+        OportunidadFactura oFactura = new OportunidadFactura();
+        oFactura.setIdFactura(f.getIdFactura());
+        oFactura.setIdOportunidad(objsalida.getIdOportunidad());
+        oportunidadFacturanservice.insertarOportunidaFactura(oFactura);
+        
+        f.setEnable("No Activo");
+        facturaService.insertarActualizarFactura(f);
+    }
+    
+    facturaList.clear();
+    return ResponseEntity.ok(objsalida);
+}
+```
+</Accordion>
+
+## Main API Endpoints
+
+### Admin Endpoints
+
+<Tabs>
+  <Tab title="List Opportunities">
+    ```http
+    GET /api/admin/listarOportunidadInversion
+    ```
+    Returns all active investment opportunities (excluding "No Activo" status).
+    
+    **Response:**
+    ```json
+    [
+      {
+        "idOportunidad": 1,
+        "rendimiento": 8.5,
+        "tir": 12.3,
+        "monto": 50000.0,
+        "montoRecaudado": 25000.0,
+        "fechaCaducidad": "2026-12-31",
+        "fechaRegistro": "2026-03-01",
+        "fechaPago": "2026-10-31",
+        "enable": "Activo"
+      }
+    ]
+    ```
+  </Tab>
+  
+  <Tab title="Create Opportunity">
+    ```http
+    POST /api/insertaOportunidadInversion
+    ```
+    Creates a new investment opportunity from the invoice list.
+    
+    **Request Body:**
+    ```json
+    {
+      "rendimiento": 8.5,
+      "tir": 12.3,
+      "monto": 50000.0,
+      "fechaCaducidad": "2026-12-31",
+      "idEmpresa": 5
+    }
+    ```
+    
+    <Note>
+      Requires invoices to be added to the session list first using `/api/addFactura`.
+    </Note>
+  </Tab>
+  
+  <Tab title="Update Opportunity">
+    ```http
+    PUT /api/actualizarOportunidadInversion
+    ```
+    Updates opportunity details. Preserves `enable`, `fechaRegistro`, and `montoRecaudado`.
+    
+    **Request Body:**
+    ```json
+    {
+      "idOportunidad": 1,
+      "rendimiento": 9.0,
+      "tir": 13.0,
+      "monto": 60000.0,
+      "fechaCaducidad": "2026-12-31",
+      "idEmpresa": 5
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Delete Opportunity">
+    ```http
+    DELETE /api/eliminarOportunidadInversion/{id}
+    ```
+    Soft deletes by setting `enable` to "No Activo".
+    
+    **Path Parameters:**
+    - `id` - Opportunity ID to delete
+  </Tab>
+</Tabs>
+
+### Invoice Management for Opportunities
+
+<Accordion title="Add Invoice to Opportunity">
+```http
+POST /api/addFactura
+```
+
+Adds an invoice to the temporary list for opportunity creation.
+
+**Request Body:**
+```json
+{
+  "idFactura": 15
+}
+```
+
+**Success Response:**
+```json
+{
+  "Facturas": [
+    {
+      "idFactura": 15,
+      "codFactura": "F-015",
+      "monto": 10000.0,
+      "enable": "Activo"
+    }
+  ]
+}
+```
+
+See controller implementation at `OportunidadInversionController.java:72-101`
+</Accordion>
+
+<Accordion title="Remove Invoice from List">
+```http
+DELETE /api/deleteFacturalist/{id}
+```
+
+Removes an invoice from the temporary list before opportunity creation.
+
+**Path Parameters:**
+- `id` - Invoice ID to remove
+
+See controller implementation at `OportunidadInversionController.java:103-131`
+</Accordion>
+
+<Accordion title="Clear Invoice List">
+```http
+GET /api/refrescarListaFactura
+```
+
+Clears the entire invoice list (useful for starting over).
+
+See controller implementation at `OportunidadInversionController.java:63-70`
+</Accordion>
+
+### User Endpoints
+
+<Tabs>
+  <Tab title="List Active Opportunities">
+    ```http
+    GET /api/user/listarOportunidadInversion
+    ```
+    Returns opportunities available for investment (excludes "No Activo").
+    
+    See implementation at `OportunidadInversionController.java:133-138`
+  </Tab>
+  
+  <Tab title="Paginated List">
+    ```http
+    GET /api/user/listarOportunidadInversion/page/{page}
+    ```
+    Returns paginated opportunities (8 per page).
+    
+    **Path Parameters:**
+    - `page` - Page number (0-indexed)
+    
+    See implementation at `OportunidadInversionController.java:145-150`
+  </Tab>
+  
+  <Tab title="Get Opportunity Details">
+    ```http
+    GET /api/user/buscarOportunidades/{idOportunidadIn}
+    GET /api/detalleOportunidadInversion/{id}
+    ```
+    Retrieves complete details of a specific opportunity.
+    
+    See implementations at `OportunidadInversionController.java:152-172` and `:326-344`
+  </Tab>
+</Tabs>
+
+### Related Endpoints
+
+```http
+GET /api/listarFacXIdOpo/{idOportunidad}
+```
+Retrieves all invoices bundled in a specific opportunity via the `OportunidadFactura` junction table.
+
+See implementation at `OportunidadInversionController.java:54-59`
+
+## Access Patterns
+
+### Admin Access
+- Full CRUD operations on investment opportunities
+- Can create opportunities by bundling invoices
+- Can update opportunity parameters (rendimiento, TIR, monto, dates)
+- Can soft-delete opportunities (mark as "No Activo")
+- Manages the invoice selection list during opportunity creation
+
+### User (Inversionista) Access
+- Read-only access to active opportunities
+- Can view detailed information including:
+  - Expected returns (rendimiento)
+  - TIR calculations
+  - Funding progress (monto vs montoRecaudado)
+  - Associated company information
+  - Payment dates
+- Can filter and paginate through available opportunities
+
+## Use Cases
+
+### Use Case 1: Creating a New Investment Opportunity
+
+**Scenario:** An admin wants to create an investment opportunity for Company XYZ's invoices.
+
+1. Admin searches for available invoices from Company XYZ
+2. Admin adds 3 invoices totaling $50,000 using `POST /api/addFactura`
+3. Admin sets rendimiento to 8.5%, TIR to 12.3%, and expiration date to Dec 31, 2026
+4. Admin submits via `POST /api/insertaOportunidadInversion`
+5. System:
+   - Creates opportunity with status "Activo"
+   - Sets montoRecaudado to 0
+   - Calculates fechaPago as Oct 31, 2026 (2 months before expiration)
+   - Links the 3 invoices to the opportunity
+   - Marks those invoices as "No Activo" (unavailable for other opportunities)
+   - Clears the temporary invoice list
+
+### Use Case 2: Investor Browsing Opportunities
+
+**Scenario:** An investor wants to find attractive investment opportunities.
+
+1. Investor calls `GET /api/user/listarOportunidadInversion/page/0`
+2. System returns first 8 active opportunities with:
+   - Expected returns (rendimiento and TIR)
+   - Target vs collected amounts
+   - Company information
+   - Payment dates
+3. Investor clicks on opportunity #5 to see details
+4. Investor calls `GET /api/detalleOportunidadInversion/5`
+5. Investor views complete information and decides whether to invest
+
+### Use Case 3: Monitoring Funding Progress
+
+**Scenario:** Admin wants to check which opportunities are close to being fully funded.
+
+1. Admin calls `GET /api/admin/listarOportunidadInversion`
+2. System returns all active opportunities with current `montoRecaudado`
+3. Admin identifies opportunities where `montoRecaudado` is close to `monto`
+4. Admin can take action (e.g., promote heavily-funded opportunities or adjust terms for under-funded ones)
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Invoice Validation" icon="check">
+    Always verify invoices are active and not already assigned before adding them to opportunities.
+  </Card>
+  <Card title="Date Management" icon="calendar">
+    Ensure fechaCaducidad provides sufficient time for funding. The system automatically calculates fechaPago 2 months prior.
+  </Card>
+  <Card title="Return Calculations" icon="calculator">
+    Calculate rendimiento and TIR accurately based on invoice values and timeframes to ensure investor trust.
+  </Card>
+  <Card title="Status Monitoring" icon="eye">
+    Regularly monitor montoRecaudado to track funding progress and make timely adjustments.
+  </Card>
+</CardGroup>
+
+## Related Features
+
+- [Invoice Management](/features/invoice-management) - Manage the invoices that feed into opportunities
+- [Wallet Transactions](/features/wallet-transactions) - Handle investor funding and payouts
+- [User Management](/features/user-management) - Control admin and investor access

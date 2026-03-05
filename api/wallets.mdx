@@ -1,0 +1,217 @@
+---
+title: 'Wallets'
+description: 'Manage user investment wallets'
+---
+
+## Get User Wallet Details
+
+```http
+GET /api/detalleCartera
+```
+
+Retrieves the wallet (cartera) details for the authenticated user.
+
+<Warning>
+Requires authenticated session. Uses session to identify current user.
+</Warning>
+
+<Note>
+Each user has exactly one wallet created automatically during registration with an initial balance of 0.
+</Note>
+
+<RequestExample>
+```bash cURL
+curl -X GET "https://api.investgo.com/api/detalleCartera" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Cookie: JSESSIONID=your_session_id"
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200 - Success
+{
+  "idCartera": 5,
+  "saldo": 25000.00,
+  "idUsu": 5,
+  "usuario": {
+    "id": 5,
+    "nombre": "Juan",
+    "apellidoPa": "Pérez",
+    "correo": "juan.perez@email.com",
+    "username": "juanperez"
+  }
+}
+```
+
+```json 404 - Wallet Not Found
+{
+  "mensaje": "El no se encontro la cartera, contacta con un administrador"
+}
+```
+</ResponseExample>
+
+---
+
+## List All Wallets (Admin)
+
+```http
+GET /api/admin/listarCarteras
+```
+
+Retrieves all wallets in the system.
+
+<Warning>
+Admin authentication required
+</Warning>
+
+<RequestExample>
+```bash cURL
+curl -X GET "https://api.investgo.com/api/admin/listarCarteras" \
+  -H "Authorization: Bearer ADMIN_TOKEN"
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200 - Success
+[
+  {
+    "idCartera": 1,
+    "saldo": 15000.00,
+    "idUsu": 2,
+    "usuario": {
+      "id": 2,
+      "nombre": "María",
+      "apellidoPa": "González",
+      "correo": "maria.gonzalez@email.com"
+    }
+  },
+  {
+    "idCartera": 2,
+    "saldo": 25000.00,
+    "idUsu": 3,
+    "usuario": {
+      "id": 3,
+      "nombre": "Carlos",
+      "apellidoPa": "Rodríguez",
+      "correo": "carlos.rodriguez@email.com"
+    }
+  }
+]
+```
+</ResponseExample>
+
+---
+
+## Wallet Schema
+
+<ResponseField name="idCartera" type="integer">
+  Wallet unique identifier
+</ResponseField>
+
+<ResponseField name="saldo" type="double">
+  Current wallet balance
+</ResponseField>
+
+<ResponseField name="idUsu" type="long">
+  User ID who owns the wallet
+</ResponseField>
+
+<ResponseField name="usuario" type="object">
+  User details
+  <Expandable title="properties">
+    <ResponseField name="id" type="long">
+      User ID
+    </ResponseField>
+    <ResponseField name="nombre" type="string">
+      User's first name
+    </ResponseField>
+    <ResponseField name="apellidoPa" type="string">
+      User's paternal last name
+    </ResponseField>
+    <ResponseField name="apellidoMa" type="string">
+      User's maternal last name
+    </ResponseField>
+    <ResponseField name="correo" type="string">
+      User's email
+    </ResponseField>
+    <ResponseField name="username" type="string">
+      User's username
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+---
+
+## Wallet Management
+
+### Automatic Creation
+Wallets are automatically created when a user registers:
+- Initial balance: 0
+- One wallet per user
+- Created in the same transaction as user registration
+
+### Balance Updates
+Wallet balances are updated through:
+- **Deposits**: Transfer from bank account to wallet (increases balance)
+- **Withdrawals**: Transfer from wallet to bank account (decreases balance)
+- **Investments**: When investing in opportunities (decreases balance)
+- **Returns**: When investment opportunities pay out (increases balance)
+
+### Balance Operations
+
+<CodeGroup>
+```bash Deposit to Wallet
+curl -X POST "https://api.investgo.com/api/deposito" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -d '{
+    "monto": 5000.00,
+    "idCuentaBancaria": 1
+  }'
+```
+
+```bash Withdraw from Wallet
+curl -X POST "https://api.investgo.com/api/retiro" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -d '{
+    "monto": 3000.00,
+    "idCuentaBancaria": 1
+  }'
+```
+
+```bash Check Balance
+curl -X GET "https://api.investgo.com/api/detalleCartera" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+</CodeGroup>
+
+---
+
+## Balance Validation
+
+The system enforces balance validation:
+
+<Warning>
+- Cannot withdraw more than available wallet balance
+- Cannot deposit more than available bank account balance
+- All balance updates are atomic (either all succeed or all fail)
+</Warning>
+
+### Example Balance Flow
+
+1. **Initial State**
+   - Wallet balance: 10,000
+   - Bank account balance: 5,000
+
+2. **After Deposit of 3,000**
+   - Wallet balance: 13,000 ✓
+   - Bank account balance: 2,000 ✓
+
+3. **Attempted Withdrawal of 15,000**
+   - ❌ Fails: Insufficient wallet balance
+   - Balances remain unchanged
+
+4. **After Withdrawal of 8,000**
+   - Wallet balance: 5,000 ✓
+   - Bank account balance: 10,000 ✓

@@ -1,0 +1,156 @@
+---
+title: 'Introduction'
+description: 'Welcome to InvestGo - A modern invoice factoring and investment platform built with Spring Boot'
+---
+
+## What is InvestGo?
+
+InvestGo is a comprehensive **invoice factoring and investment SaaS platform** that connects businesses needing immediate cash flow with investors seeking profitable opportunities. Built on Spring Boot, InvestGo enables companies to sell their unpaid invoices at a discount while providing investors with attractive returns through secure, vetted investment opportunities.
+
+## Key Capabilities
+
+### Investment Opportunities Management
+InvestGo creates and manages investment opportunities based on factored invoices. Each opportunity includes:
+- **TIR (Internal Rate of Return)** and yield calculations
+- Risk assessment ratings (A, B, C)
+- Fundraising tracking with automatic status updates
+- Maturity dates and payment schedules
+
+### Invoice Factoring
+Businesses can upload and factor their invoices:
+- Invoice registration with enterprise validation
+- Multi-invoice bundling into investment opportunities
+- Automated status tracking (Active/Inactive)
+- Payment date calculations
+
+### User & Role Management
+Secure authentication and authorization system:
+- **Admin** and **Inversionista** (Investor) roles
+- JWT-based authentication
+- BCrypt password encryption
+- User profiles with KYC information (DNI, contact details)
+
+### Digital Wallet System
+Each user has an integrated digital wallet (Cartera) for:
+- Balance management
+- Investment tracking
+- Transaction history (deposits and withdrawals)
+- Bank account integration
+
+### Enterprise Risk Management
+Comprehensive risk assessment framework:
+- Enterprise profiling with business sector analysis
+- Risk ratings with detailed descriptions
+- Legal representative verification
+- RUC (tax ID) validation
+
+## Technology Stack
+
+### Backend Framework
+- **Spring Boot 2.7.5** - Core application framework
+- **Java 1.8** - Programming language
+- **Spring Data JPA** - Database abstraction layer
+- **Hibernate** - ORM with MySQL8Dialect
+
+### Security
+- **Spring Security** - Authentication and authorization
+- **JWT (JJWT 0.9.1)** - Token-based authentication
+- **BCrypt** - Password encryption
+- Session-less (stateless) architecture
+
+### Database
+- **MySQL 8** - Primary database (schema: InvestGo)
+- JPA entity relationships with lazy loading
+- Automatic schema updates (`ddl-auto=update`)
+
+### Additional Dependencies
+- **Spring Validation** - Bean validation
+- **Spring DevTools** - Development utilities
+- **Jackson** - JSON serialization with timezone support (America/Lima)
+
+## Who Should Use This Documentation?
+
+This documentation is designed for:
+
+- **Backend Developers** building or extending the InvestGo platform
+- **API Integrators** connecting frontend applications or third-party services
+- **DevOps Engineers** deploying and maintaining the application
+- **System Architects** understanding the platform's design patterns and structure
+
+## Core Entities
+
+InvestGo is built around several key domain entities:
+
+| Entity | Description |
+|--------|-------------|
+| `Usuario` | Users with role-based access (Admin/Investor) |
+| `Empresa` | Companies seeking invoice factoring |
+| `Factura` | Invoices to be factored |
+| `OportunidadInversion` | Investment opportunities created from invoices |
+| `Cartera` | Digital wallets for users |
+| `Transacciones` | Wallet transactions (deposits/withdrawals) |
+| `Riesgo` | Risk assessment levels (A, B, C) |
+| `CuentaBancaria` | Bank accounts for transactions |
+
+## Getting Started
+
+<CardGroup cols={2}>
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Set up your development environment and run InvestGo in minutes
+  </Card>
+  <Card title="Architecture" icon="sitemap" href="/architecture">
+    Understand the system design, patterns, and entity relationships
+  </Card>
+</CardGroup>
+
+## Platform Features
+
+<AccordionGroup>
+  <Accordion title="Investment Workflow">
+    1. Admin reviews and registers enterprises with risk assessment
+    2. Enterprises upload invoices for factoring
+    3. Admin creates investment opportunities by bundling invoices
+    4. Investors browse opportunities and invest from their wallet
+    5. System tracks fundraising and automatically closes opportunities
+    6. Returns are calculated and distributed on maturity dates
+  </Accordion>
+
+  <Accordion title="Security Features">
+    - JWT tokens with Bearer authentication
+    - Role-based access control (RBAC)
+    - BCrypt password hashing
+    - Stateless session management
+    - CORS configuration for API access
+    - Authentication entry point for unauthorized requests
+  </Accordion>
+
+  <Accordion title="API Architecture">
+    - RESTful endpoints under `/api` prefix
+    - Separate `/admin` and `/user` routes for role-based access
+    - Public `/generate-token` endpoint for authentication
+    - Pagination support for large datasets
+    - Comprehensive error handling with HTTP status codes
+  </Accordion>
+</AccordionGroup>
+
+## Project Structure
+
+The application follows a layered architecture:
+
+```
+com.proyecto.integrador
+├── controladores/       # REST controllers (@RestController)
+├── servicios/          # Business logic layer (@Service)
+├── repositorios/       # Data access layer (@Repository)
+├── entidades/          # JPA entities (@Entity)
+├── configuraciones/    # Security and JWT configuration
+└── dto/                # Data transfer objects
+```
+
+<Note>
+  All timestamps in InvestGo use the **America/Lima** timezone. Ensure your deployment environment is configured accordingly.
+</Note>
+
+## Next Steps
+
+Ready to dive in? Start with our [Quickstart Guide](/quickstart) to set up your local development environment, or explore the [Architecture](/architecture) documentation to understand the system design in depth.
