@@ -71,9 +71,12 @@
               "api/invoices",
               "api/companies",
               "api/investment-opportunities",
+              "api/user-investments",
               "api/transactions",
               "api/wallets",
-              "api/banks"
+              "api/bank-accounts",
+              "api/banks",
+              "api/currencies"
             ]
           }
         ]

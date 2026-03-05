@@ -1,0 +1,153 @@
+---
+title: 'Currencies'
+description: 'Manage supported currencies for transactions'
+---
+
+## List All Currencies
+
+```http
+GET /api/listarMonedas
+```
+
+Retrieves all supported currencies in the system.
+
+<Note>
+This endpoint provides a catalog of available currencies for users to configure their bank accounts and investments.
+</Note>
+
+<RequestExample>
+```bash cURL
+curl -X GET "https://api.investgo.com/api/listarMonedas" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200 - Success
+[
+  {
+    "idMonedas": 1,
+    "nomMonedas": "Soles",
+    "valorMoneda": "PEN"
+  },
+  {
+    "idMonedas": 2,
+    "nomMonedas": "Dólares",
+    "valorMoneda": "USD"
+  },
+  {
+    "idMonedas": 3,
+    "nomMonedas": "Euros",
+    "valorMoneda": "EUR"
+  }
+]
+```
+</ResponseExample>
+
+---
+
+## Currency Schema
+
+<ResponseField name="idMonedas" type="integer">
+  Currency unique identifier
+</ResponseField>
+
+<ResponseField name="nomMonedas" type="string">
+  Currency name (e.g., "Soles", "Dólares")
+</ResponseField>
+
+<ResponseField name="valorMoneda" type="string">
+  Currency code (ISO 4217 format: PEN, USD, EUR)
+</ResponseField>
+
+---
+
+## Usage in Bank Accounts
+
+Currencies are referenced when users create bank accounts (CuentaBancaria). The currency ID from this list is used to specify the currency type for a user's bank account.
+
+### Typical Flow
+
+1. **List Available Currencies**
+   ```bash
+   GET /api/listarMonedas
+   ```
+   User sees all supported currencies
+
+2. **User Selects Currency**
+   User chooses a currency from the list (e.g., idMonedas: 1 for PEN)
+
+3. **Create Bank Account**
+   ```bash
+   POST /api/registrarCuentaBancaria
+   {
+     "nroCuenta": "123456789",
+     "nroCuentaCci": "00212345678901234567",
+     "cvv": "123",
+     "mes": "12",
+     "year": "2025",
+     "nombreCompleto": "Juan Pérez",
+     "bancos": {
+       "idBancos": 1
+     },
+     "monedas": {
+       "idMonedas": 1
+     }
+   }
+   ```
+
+4. **Perform Transactions**
+   User can now deposit/withdraw using their bank account in the specified currency
+
+---
+
+## Supported Currencies
+
+The InvestGo platform currently supports the following currencies:
+
+| Currency ID | Currency Name | Currency Code |
+|-------------|---------------|---------------|
+| 1 | Soles | PEN |
+| 2 | Dólares | USD |
+| 3 | Euros | EUR |
+
+<Note>
+The currency list is managed by administrators. Contact support to request adding support for additional currencies.
+</Note>
+
+---
+
+## Integration Notes
+
+<Warning>
+This endpoint provides reference data only. Currency conversions and exchange rates are not currently supported in the platform.
+</Warning>
+
+### Bank Account Relationship
+
+The currency information is used in the CuentaBancaria (Bank Account) entity:
+
+```json Bank Account Example
+{
+  "idCuentaBancaria": 1,
+  "nroCuenta": "123456789",
+  "nroCuentaCci": "00212345678901234567",
+  "saldo": 45000.00,
+  "monedas": {
+    "idMonedas": 1,
+    "nomMonedas": "Soles",
+    "valorMoneda": "PEN"
+  },
+  "bancos": {
+    "idBancos": 1,
+    "nomBancos": "Banco de Crédito del Perú"
+  }
+}
+```
+
+### Used In
+
+- **Bank Accounts**: Specify account currency type
+- **Transaction History**: Display transaction amounts with correct currency
+- **Investment Opportunities**: Define investment amount currency
+- **User Profile**: Display balances in appropriate currency format
