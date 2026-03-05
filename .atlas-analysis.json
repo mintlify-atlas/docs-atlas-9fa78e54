@@ -1,0 +1,89 @@
+{
+  "projectType": "saas",
+  "projectName": "InvestGo Factoring Platform",
+  "projectDescription": "A Spring Boot-based invoice factoring and investment platform that enables users to invest in invoices and manage financial portfolios.",
+  "theme": "almond",
+  "primaryColor": "#1E88E5",
+  "lightColor": "#64B5F6",
+  "darkColor": "#1565C0",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "architecture"
+            ]
+          },
+          {
+            "group": "Core Features",
+            "pages": [
+              "features/investment-opportunities",
+              "features/invoice-management",
+              "features/user-management",
+              "features/wallet-transactions"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/authentication",
+              "guides/security",
+              "guides/database-setup"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Authentication",
+            "pages": [
+              "api/auth"
+            ]
+          },
+          {
+            "group": "Resources",
+            "pages": [
+              "api/users",
+              "api/invoices",
+              "api/companies",
+              "api/investment-opportunities",
+              "api/transactions",
+              "api/wallets",
+              "api/banks"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "JWT-based authentication with role-based access control (Admin/Investor)",
+    "Invoice management with automatic code generation and status tracking",
+    "Investment opportunity creation linking multiple invoices",
+    "Digital wallet system for managing user funds and transactions",
+    "Company and bank account management",
+    "Multi-currency support (PEN/USD)",
+    "Risk assessment system for investment opportunities",
+    "Paginated API endpoints for efficient data retrieval"
+  ],
+  "publicApiSurface": [
+    "POST /generate-token - Generate JWT authentication token",
+    "GET /actual-usuario - Get current authenticated user",
+    "GET /api/listarOportunidadInversion - List all investment opportunities",
+    "POST /api/insertaOportunidadInversion - Create new investment opportunity",
+    "GET /api/listaFacturas - List all invoices",
+    "POST /api/registrarFactura - Register new invoice",
+    "GET /api/user/listarOportunidadInversion - List active investment opportunities for users",
+    "POST /api/addFactura - Add invoice to opportunity creation list",
+    "GET /api/facturas/{idEmpresa} - Get invoices by company",
+    "PUT /api/actualizarOportunidadInversion - Update investment opportunity",
+    "DELETE /api/eliminarOportunidadInversion/{id} - Soft delete investment opportunity"
+  ]
+}
